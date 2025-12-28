@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { useLiteSimStore } from '@/lib/litesim/state';
+import { useLiteSimStore } from '@/lib/simulation/state';
 import SettingsPanel from './SettingsPanel';
 import * as Tabs from '@radix-ui/react-tabs';
 

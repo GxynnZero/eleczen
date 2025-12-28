@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Loader2, User, Shield, Trash2, Search } from "lucide-react";
 import toast from "react-hot-toast";
+import { AdminService } from "@/services/admin";
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState([]);
@@ -15,9 +16,7 @@ export default function AdminUsersPage() {
 
     const fetchUsers = async () => {
         try {
-            const res = await fetch("/api/admin/users");
-            if (!res.ok) throw new Error("Failed to fetch users");
-            const data = await res.json();
+            const data = await AdminService.getUsers();
             setUsers(data);
         } catch (error) {
             console.error(error);
@@ -107,8 +106,8 @@ export default function AdminUsersPage() {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span
                                                 className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === "admin"
-                                                        ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/30"
-                                                        : "bg-gray-700 text-gray-300"
+                                                    ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/30"
+                                                    : "bg-gray-700 text-gray-300"
                                                     }`}
                                             >
                                                 {user.role}

@@ -16,7 +16,40 @@ const ResizeHandleHorizontal = ({ className = "" }) => (
     <PanelResizeHandle className={`h-1 bg-white/5 data-[resize-handle-active]:bg-neon-blue outline-none relative z-50 hover:bg-neon-blue/20 transition-colors ${className}`} />
 );
 
-const Workbench = () => {
+import { useLiteSimStore } from '@/lib/simulation/state';
+
+const Workbench = ({ circuitId }) => {
+    const { loadCircuit } = useLiteSimStore();
+
+    React.useEffect(() => {
+        const fetchCircuit = async () => {
+            if (!circuitId) return;
+            try {
+                // Import supabase dynamically from root
+                const { supabase } = await import('../../../../supabase/supabase');
+
+                const { data, error } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('id', circuitId)
+                    .single();
+
+                if (error) throw error;
+
+                if (data && data.content) {
+                    console.log("Loading circuit:", data.name);
+                    // Parse if string/JSON
+                    const content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+                    loadCircuit(content);
+                }
+            } catch (err) {
+                console.error("Failed to load circuit:", err);
+            }
+        };
+
+        fetchCircuit();
+    }, [circuitId, loadCircuit]);
+
     usePreventDevTools();
 
     return (

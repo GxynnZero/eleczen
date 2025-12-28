@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { useLiteSimStore } from '@/lib/litesim/state';
+import { useLiteSimStore } from '@/lib/simulation/state';
 import { saveCircuitAction } from '@/app/actions/circuit';
 import { Loader2, Save } from 'lucide-react';
 

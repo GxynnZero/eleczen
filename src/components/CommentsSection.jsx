@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Send, User as UserIcon, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { CommentService } from "@/services/comments";
 
 export default function CommentsSection({ postId }) {
     const { data: session } = useSession();
@@ -18,9 +19,7 @@ export default function CommentsSection({ postId }) {
 
     const fetchComments = async () => {
         try {
-            const res = await fetch(`/api/comments?postId=${postId}`);
-            if (!res.ok) throw new Error("Failed to fetch comments");
-            const data = await res.json();
+            const data = await CommentService.getByPostId(postId);
             setComments(data);
         } catch (error) {
             console.error(error);
@@ -41,15 +40,7 @@ export default function CommentsSection({ postId }) {
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/comments", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ content: newComment, postId }),
-            });
-
-            if (!res.ok) throw new Error("Failed to post comment");
-
-            const comment = await res.json();
+            const comment = await CommentService.create({ content: newComment, postId });
             setComments([comment, ...comments]);
             setNewComment("");
             toast.success("Comment posted!");
@@ -65,12 +56,7 @@ export default function CommentsSection({ postId }) {
         if (!confirm("Are you sure you want to delete this comment?")) return;
 
         try {
-            const res = await fetch(`/api/comments/${commentId}`, {
-                method: "DELETE",
-            });
-
-            if (!res.ok) throw new Error("Failed to delete comment");
-
+            await CommentService.delete(commentId);
             setComments(comments.filter((c) => c._id !== commentId));
             toast.success("Comment deleted");
         } catch (error) {

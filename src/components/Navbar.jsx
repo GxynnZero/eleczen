@@ -17,9 +17,10 @@ const navItems = [
 ];
 
 export default function Navbar() {
+  
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const { data: session } = useSession();
+  const { data: session } = useSession;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-white/10 backdrop-blur-xl bg-black/50">

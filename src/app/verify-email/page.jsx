@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Lock, Loader2, CheckCircle } from "lucide-react";
+import { AuthService } from "@/services/auth";
 
 function VerifyEmailContent() {
     const router = useRouter();
@@ -39,23 +40,12 @@ function VerifyEmailContent() {
         setMessage("");
 
         try {
-            const res = await fetch("/api/auth/send-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                setMessage("Code resent successfully!");
-                setTimer(60);
-                setCanResend(false);
-            } else {
-                setError(data.message || "Failed to resend code");
-            }
+            await AuthService.sendOtp({ email });
+            setMessage("Code resent successfully!");
+            setTimer(60);
+            setCanResend(false);
         } catch (err) {
-            setError("Failed to resend code");
+            setError(err.message || "Failed to resend code");
         } finally {
             setResendLoading(false);
         }
@@ -73,24 +63,13 @@ function VerifyEmailContent() {
                 body.newPassword = newPassword;
             }
 
-            const res = await fetch("/api/auth/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                setMessage("Success! Redirecting to login...");
-                setTimeout(() => {
-                    router.push("/login");
-                }, 2000);
-            } else {
-                setError(data.message || "Verification failed");
-            }
+            await AuthService.verify(body);
+            setMessage("Success! Redirecting to login...");
+            setTimeout(() => {
+                router.push("/login");
+            }, 2000);
         } catch (err) {
-            setError("Failed to verify");
+            setError(err.message || "Verification failed");
         } finally {
             setLoading(false);
         }

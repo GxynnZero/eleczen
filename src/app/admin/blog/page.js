@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Loader2, FileText, Edit, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { AdminService } from "@/services/admin";
 
 export default function AdminBlogPage() {
   const [posts, setPosts] = useState([]);
@@ -15,20 +16,10 @@ export default function AdminBlogPage() {
 
   const fetchPosts = async () => {
     try {
-      // Fetching from public API for now, assuming it returns all posts
-      // Ideally we'd have an admin endpoint that includes drafts
-      const res = await fetch("/api/blog");
-      // Note: I haven't created /api/blog yet either! The public blog page uses server actions or direct DB calls.
-      // I should check if there is an API for blog posts.
-      // The sitemap used `Post.find({})`.
-      // I'll create /api/blog/route.js to serve this list.
-      if (!res.ok) throw new Error("Failed to fetch posts");
-      const data = await res.json();
+      const data = await AdminService.getPosts();
       setPosts(data);
     } catch (error) {
       console.error(error);
-      // toast.error("Could not load posts"); 
-      // Suppress error if API doesn't exist yet, but I'll create it.
     } finally {
       setLoading(false);
     }
@@ -38,12 +29,7 @@ export default function AdminBlogPage() {
     if (!confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      const res = await fetch(`/api/blog/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error("Failed to delete post");
-
+      await AdminService.deletePost(id);
       setPosts(posts.filter((post) => post.id !== id));
       toast.success("Post deleted");
     } catch (error) {

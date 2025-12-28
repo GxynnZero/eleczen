@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, Zap } from 'lucide-react';
-import { useLiteSimStore } from '@/lib/litesim/state';
+import { useLiteSimStore } from '@/lib/simulation/state';
 import { saveCircuitAction } from '@/app/actions/circuit';
 
 const NavbarPanel = () => {

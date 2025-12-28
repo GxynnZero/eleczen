@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { globalModelStore } from '@/lib/litesim/modelStore';
+import { globalModelStore } from '@/lib/simulation/modelStore';
 import { supabase } from '../../../supabase/supabase';
 import { Search, Package, Server, Upload, X, Cpu, HardDrive, Battery, Zap, Activity, RefreshCw } from 'lucide-react';
 
@@ -38,14 +38,6 @@ const LibraryBrowser = ({ isOpen, onClose, onSelect }) => {
     }, [isOpen]);
 
     const loadItems = async () => {
-        // Clear component loader cache for fresh data
-        try {
-            const { globalComponentLoader } = await import('@/lib/loader/component');
-            globalComponentLoader.clearCache();
-        } catch (e) {
-            // Component loader might not be available
-        }
-
         // Load only real components from database
         let items = [];
 
@@ -75,8 +67,8 @@ const LibraryBrowser = ({ isOpen, onClose, onSelect }) => {
                         // Simple mapping for storage files
                         return {
                             name: d.name,
-                            type: 'component',
-                            category: 'storage',
+                            type: d.type,
+                            category: d.category,
                             source: 'storage',
                             symbol: '⚡'
                         };

@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useState, useEffect } from 'react';
-import { useLiteSimStore } from '@/lib/litesim/state';
+import { useLiteSimStore } from '@/lib/simulation/state';
 import ComponentNode from './ComponentNode';
 import Wire from './Wire';
 import { getComponentDef } from './StandardParts';
@@ -13,11 +13,11 @@ const Canvas = ({ settings }) => {
         components, wires, selection,
         addComponent, updateComponentPosition, addWire, updateWirePoints,
         setSelection, removeSelection, runSimulation, clearCanvas,
-        exportRequest, resolveExport
+        exportRequest, resolveExport,
+        view, updateView // Use view from store
     } = useLiteSimStore();
 
     const svgRef = useRef(null);
-    const [view, setView] = useState({ x: 0, y: 0, zoom: 2 });
     const [drag, setDrag] = useState(null); // { type: 'pan' | 'comp' | 'handle', id, index, startX, startY, origX, origY }
     const [wiring, setWiring] = useState(null); // { fromComp, fromPort, currX, currY }
     const [libraryOpen, setLibraryOpen] = useState(false); // For picking components and managing libraries
@@ -310,17 +310,16 @@ const Canvas = ({ settings }) => {
 
     const loadAndAddComponent = async (name, x, y) => {
         try {
-            const { globalComponentLoader } = await import('@/lib/loader/component');
-            const compDef = await globalComponentLoader.loadComponent(name);
+            const { fetchAndLoadComponent, toLiteSimDef } = await import('@/lib/loader/ComponentLoader');
+            const compDef = await fetchAndLoadComponent(name);
 
             if (compDef) {
-                const liteSimDef = globalComponentLoader.toLiteSimDef(compDef);
+                const liteSimDef = toLiteSimDef(compDef);
 
-                // Add component with custom definition
                 addComponent(name, x, y, {
                     customDef: liteSimDef,
                     customPorts: liteSimDef.ports,
-                    model: name // Use component name as model name
+                    model: name
                 });
             } else {
                 console.error(`Failed to load component: ${name}`);
@@ -516,7 +515,7 @@ const Canvas = ({ settings }) => {
         if (drag.type === 'pan') {
             const dx = e.clientX - drag.startX;
             const dy = e.clientY - drag.startY;
-            setView(prev => ({ ...prev, x: drag.origX + dx, y: drag.origY + dy }));
+            updateView({ x: drag.origX + dx, y: drag.origY + dy });
         } else if (drag.type === 'comp') {
             const pt = screenToWorld(e.clientX, e.clientY);
             const dx = pt.x - drag.startX;
@@ -636,7 +635,7 @@ const Canvas = ({ settings }) => {
     const handleWheel = (e) => {
         // Simple zoom
         const newZoom = Math.max(0.1, Math.min(5, view.zoom - e.deltaY * 0.001));
-        setView(prev => ({ ...prev, zoom: newZoom }));
+        updateView({ zoom: newZoom });
     };
 
     // Handle Drop from Toolbar

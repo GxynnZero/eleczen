@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
-import { auth } from "../../../api/src/app/lib/auth/auth";
+import { configDotenv } from "dotenv";
+
+configDotenv();
 
 export default async function AdminLayout({ children }) {
-  const session = await auth();
+  const baseUrl = process.env.BASE_URL;
+  const session = await fetch(`${baseUrl}/api/auth/session`);
 
   if (!session?.user) {
     redirect("/login");

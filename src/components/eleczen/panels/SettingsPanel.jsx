@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { useLiteSimStore } from '@/lib/litesim/state';
+import { useLiteSimStore } from '@/lib/simulation/state';
 
 const SettingsPanel = () => {
     const { settings, upgrades, updateSetting, toggleUpgrade, simulation } = useLiteSimStore();

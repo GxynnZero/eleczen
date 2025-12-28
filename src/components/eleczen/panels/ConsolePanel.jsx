@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { useLiteSimStore } from '@/lib/litesim/state';
+import { useLiteSimStore } from '@/lib/simulation/state';
 
 const ConsolePanel = () => {
     const { logs, clearLogs } = useLiteSimStore();
@@ -21,8 +21,8 @@ const ConsolePanel = () => {
 
                 {logs.map((log, i) => (
                     <div key={i} className={`px-2 py-0.5 border-l-2 pl-2 ${log.type === 'error' ? 'border-red-500 text-red-400' :
-                            log.type === 'warn' ? 'border-yellow-500 text-yellow-500' :
-                                'border-gray-800'
+                        log.type === 'warn' ? 'border-yellow-500 text-yellow-500' :
+                            'border-gray-800'
                         }`}>
                         <span className="opacity-40 mr-2">[{new Date(log.timestamp).toLocaleTimeString([], { hour12: false })}]</span>
                         {log.message}

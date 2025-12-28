@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Edit } from "lucide-react";
-import { auth } from "../../../../api/src/app/lib/auth/auth";
+import { configDotenv } from "dotenv";
 import JsonLd from "@/components/JsonLd";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import CommentsSection from "@/components/CommentsSection";
@@ -10,6 +10,9 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import "highlight.js/styles/atom-one-dark.css";
 import { supabase } from "../../../../supabase/supabase";
+import { AuthService } from "@/services/auth";
+
+configDotenv();
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +74,7 @@ export async function generateMetadata({ params }) {
 export default async function BlogPost({ params }) {
   const { slug } = await params;
   const post = await getPost(slug);
-  const session = await auth();
+  const session = await AuthService.getSession();
   const isAdmin = session?.user?.role === "admin";
 
   if (!post) {

@@ -1,7 +1,7 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import Providers from "@/components/Providers";
 import ToastProvider from "@/components/ToastProvider";
+import Providers from "@/components/Providers"
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 
@@ -130,7 +130,6 @@ export default function RootLayout({ children }) {
           className="fixed inset-0 z-[-1] opacity-20 pointer-events-none"
           style={{ backgroundImage: 'url("/grid.svg")' }}
         />
-
         <Providers>
           <ToastProvider />
           <Navbar />

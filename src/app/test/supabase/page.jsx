@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../../supabase/supabase';
-import { globalComponentLoader } from '@/lib/loader/component';
+import { fetchAndLoadComponent } from '@/lib/loader/ComponentLoader';
 import { Loader2, RefreshCw, Database, Code, Image as ImageIcon } from 'lucide-react';
 
 export default function TestComponentsPage() {
@@ -76,11 +76,10 @@ export default function TestComponentsPage() {
 
         try {
             // First clear cache to ensure fresh fetch
-            globalComponentLoader.clearCache();
-            addLog('Cleared component loader cache.');
+            // globalComponentLoader.clearCache();
+            addLog('Cleared component loader cache (stateless now).');
 
-            const data = await globalComponentLoader.loadComponent(component.name);
-
+            const data = await fetchAndLoadComponent(component.name);
             if (data) {
                 setComponentData(data);
                 addLog(`Successfully loaded component ${component.name}`, 'success');

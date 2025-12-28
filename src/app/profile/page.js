@@ -1,10 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth } from "../../../api/src/app/lib/auth/auth";
 import ProfileClient from "./ProfileClient";
+import { AuthService } from "@/services/auth";
+import { configDotenv } from "dotenv";
+
+configDotenv();
 
 export default async function ProfilePage() {
-  const session = await auth();
+  const session = await AuthService.getSession();
 
   if (!session?.user) {
     redirect("/api/auth/signin?callbackUrl=/profile");
