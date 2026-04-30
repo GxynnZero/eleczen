@@ -23,7 +23,7 @@
     "better-auth": "^1.6.9",
     "drizzle-orm": "^0.45.2",
     "eecircuit-engine": "^1.7.0",
-    "lucide-solid": "^1.11.0",
+    "lucide-solid": "^1.14.0",
     "pg": "^8.20.0",
     "pixi-viewport": "^6.0.3",
     "pixi.js": "^8.18.1",

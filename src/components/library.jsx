@@ -11,14 +11,7 @@ import {
 
 import { PARTS } from "../simulation/engine";
 import { addComponent } from "../store/state";
-
-const icons = {
-    battery: BatteryCharging,
-    resistor: Zap,
-    led: Lightbulb,
-    capacitor: Waves,
-    switch: Lightbulb,
-};
+import { icons } from ".";
 
 export default function Library() {
     const [open, setOpen] = createSignal(false);
