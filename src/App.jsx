@@ -446,26 +446,21 @@ function EditorPage() {
       <Toolbar />
 
       <div class="flex h-[calc(100vh-96px)]">
-
         {/* Fixed Left Tool Rail */}
         <aside class="w-16 shrink-0 border-r border-white/10">
           <ToolsPanel />
         </aside>
 
-        {/* Resizable Main Layout */}
-        <div class="flex-1 min-w-0">
-          <SplitPane
-            sizes={[22, 58, 20]}
-            minSize={[220, 400, 260]}
-            gutterSize={8}
-            gutterClass="split-gutter split-gutter-vertical"
-          >
-            <ComponentLibrary />
-            <Canvas />
-            <RightRail />
-          </SplitPane>
-        </div>
-
+        <SplitPane
+          sizes={[20, 60, 20]}
+          minSize={[220, 400, 260]}
+          gutterSize={8}
+          gutterClass="split-gutter split-gutter-vertical"
+        >
+          <ComponentLibrary />
+          <Canvas />
+          <RightRail />
+        </SplitPane>
       </div>
     </div>
   );
