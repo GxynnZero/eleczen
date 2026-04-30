@@ -498,7 +498,7 @@ export default function Home() {
                         <div class="relative z-10" style={heroParallaxStyle()}>
                             <div class={`inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-medium uppercase tracking-[0.28em] text-cyan-100 backdrop-blur-xl transition-all duration-700 ${heroReady() ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}>
                                 <Sparkles size={14} />
-                                Next Generation Electronics Workspace
+                                Next Generation Electronics Workspace under maintaince
                             </div>
 
                             <h1 class={`mt-7 max-w-3xl text-5xl font-black leading-[0.92] tracking-[-0.05em] text-white md:text-7xl lg:text-[5.4rem] transition-all duration-900 ${heroReady() ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
