@@ -25,7 +25,7 @@ body {
     radial-gradient(circle at 18% 10%, rgba(24, 138, 112, 0.18), transparent 28%),
     radial-gradient(circle at 80% 0%, rgba(210, 132, 44, 0.16), transparent 26%),
     #08090c;
-    overflow: auto;
+  overflow: auto;
 }
 
 button {
@@ -661,24 +661,121 @@ input:focus-visible {
 .graph-summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 12px;
 }
 
 .graph-view {
-  max-height: 130px;
-  overflow: auto;
+  min-height: 140px;
+  overflow: hidden;
   margin: 0;
-  padding: 10px;
-  border-radius: 8px;
-  background: #080b0e;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.92);
   color: #cbd5e1;
-  font-size: 0.72rem;
-  line-height: 1.45;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.console-panel {
+  display: grid;
+  grid-template-columns: minmax(340px, 1.4fr) minmax(260px, 0.8fr);
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 8, 16, 0.93);
+}
+
+.console-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.console-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.analysis-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.analysis-tabs button,
+.run-panel {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d9e1e8;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.analysis-tabs button.active,
+.run-panel:hover {
+  background: rgba(34, 211, 238, 0.15);
+  color: #e7fffb;
+}
+
+.probe-list {
+  display: grid;
+  gap: 8px;
+  max-height: 170px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.probe-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.probe-item input {
+  accent-color: #22d3ee;
+}
+
+.sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 60px;
+  margin-top: 12px;
+}
+
+.sparkline-bar {
+  width: 6px;
+  background: linear-gradient(180deg, #22d3ee, #0ea5e9);
+  border-radius: 999px;
 }
 
 .engine-output {
-  max-height: 90px;
+  max-height: 220px;
   color: #9fb3c8;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.console-panel .panel-title.compact {
+  margin-bottom: 8px;
 }
 
 .log {

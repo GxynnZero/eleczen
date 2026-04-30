@@ -122,15 +122,15 @@ export function routeWire(start, end, components = [], terminals = {}) {
   const targetId = terminals.to?.componentId;
   const obstacles = components
     .filter((component) => component.id !== sourceId && component.id !== targetId)
-    .map((component) => componentBounds(component));
-  const blocked = (point) => obstacles.some((rect) => inside(rect, point));
+    .map((component) => componentBounds(component, 22));
+
   const startNode = snapPoint(start);
   const endNode = snapPoint(end);
   const key = (point) => `${point.x},${point.y}`;
   const score = (point) => Math.abs(point.x - endNode.x) + Math.abs(point.y - endNode.y);
-  const open = [{ point: startNode, cost: 0, priority: score(startNode) }];
-  const cameFrom = new Map();
-  const costSoFar = new Map([[key(startNode), 0]]);
+  const blocked = (point) => obstacles.some((rect) => inside(rect, point));
+  const isValid = (point) => point.x >= BOARD.grid && point.x <= BOARD.width - BOARD.grid && point.y >= BOARD.grid && point.y <= BOARD.height - BOARD.grid;
+
   const directions = [
     { x: BOARD.grid, y: 0 },
     { x: -BOARD.grid, y: 0 },
@@ -138,47 +138,97 @@ export function routeWire(start, end, components = [], terminals = {}) {
     { x: 0, y: -BOARD.grid },
   ];
 
+  const normalizeRoute = (route) => {
+    if (!route?.length) return compactPoints([start, end]);
+    const filtered = route.filter(Boolean);
+    const compacted = filtered.filter((point, index) => index === 0 || key(point) !== key(filtered[index - 1]));
+    const middle = compacted.slice(1, -1).map((point) => ({ x: point.x, y: point.y }));
+    return compactPoints([start, ...middle, end]);
+  };
+
+  const segmentBlocked = (from, to) => {
+    if (from.x !== to.x && from.y !== to.y) return true;
+    const steps = Math.max(Math.abs(to.x - from.x), Math.abs(to.y - from.y)) / (BOARD.grid / 2);
+    for (let i = 0; i <= steps; i += 1) {
+      const point = {
+        x: from.x + ((to.x - from.x) * i) / steps,
+        y: from.y + ((to.y - from.y) * i) / steps,
+      };
+      if (blocked(point)) return true;
+    }
+    return false;
+  };
+
+  const buildCandidate = (corner) => {
+    if (!corner) return null;
+    const route = [start, corner, end];
+    if (segmentBlocked(start, corner) || segmentBlocked(corner, end)) return null;
+    return normalizeRoute(route);
+  };
+
+  if (key(startNode) === key(endNode)) {
+    const offset = Math.max(BOARD.grid / 3, 12);
+    const loop = [
+      { x: start.x + offset, y: start.y },
+      { x: start.x + offset, y: start.y + offset },
+      { x: start.x, y: start.y + offset },
+    ];
+    return compactPoints([start, ...loop, start]);
+  }
+
+  const candidateA = buildCandidate({ x: end.x, y: start.y });
+  if (candidateA) return candidateA;
+
+  const candidateB = buildCandidate({ x: start.x, y: end.y });
+  if (candidateB) return candidateB;
+
+  const open = [{ point: startNode, cost: 0, priority: score(startNode), previous: null }];
+  const cameFrom = new Map();
+  const costSoFar = new Map([[key(startNode), 0]]);
+
   while (open.length) {
     open.sort((a, b) => a.priority - b.priority);
-    const current = open.shift().point;
-    const currentKey = key(current);
-    if (currentKey === key(endNode)) break;
+    const current = open.shift();
+    const currentKey = key(current.point);
+    if (currentKey === key(endNode)) {
+      cameFrom.set(currentKey, { point: current.previous?.point || current.point });
+      break;
+    }
 
     for (const direction of directions) {
       const next = {
-        x: clamp(current.x + direction.x, BOARD.grid, BOARD.width - BOARD.grid),
-        y: clamp(current.y + direction.y, BOARD.grid, BOARD.height - BOARD.grid),
+        x: current.point.x + direction.x,
+        y: current.point.y + direction.y,
       };
       const nextKey = key(next);
-      if (blocked(next) || nextKey === currentKey) continue;
+      if (!isValid(next) || nextKey === currentKey) continue;
+      if (blocked(next) && nextKey !== key(endNode)) continue;
 
-      const currentCost = costSoFar.get(currentKey) || 0;
-      const previous = cameFrom.get(currentKey)?.point;
-      const bendPenalty = previous && previous.x !== next.x && previous.y !== next.y ? BOARD.grid * 0.4 : 0;
-      const newCost = currentCost + BOARD.grid + bendPenalty;
+      const turnCost = current.previous && (current.previous.point.x !== next.x || current.previous.point.y !== next.y) ? BOARD.grid * 0.45 : 0;
+      const newCost = costSoFar.get(currentKey) + BOARD.grid + turnCost;
 
       if (!costSoFar.has(nextKey) || newCost < costSoFar.get(nextKey)) {
         costSoFar.set(nextKey, newCost);
-        cameFrom.set(nextKey, { point: current });
-        open.push({ point: next, cost: newCost, priority: newCost + score(next) });
+        cameFrom.set(nextKey, { point: current.point });
+        open.push({ point: next, cost: newCost, priority: newCost + score(next), previous: current });
       }
     }
   }
 
-  if (!cameFrom.has(key(endNode)) && key(startNode) !== key(endNode)) {
-    return compactPoints([start, { x: start.x, y: end.y }, end]);
+  if (!cameFrom.has(key(endNode))) {
+    return normalizeRoute([startNode, { x: start.x, y: end.y }, endNode]);
   }
 
   const path = [endNode];
   let cursor = key(endNode);
   while (cursor !== key(startNode)) {
     const previous = cameFrom.get(cursor);
-    if (!previous) break;
+    if (!previous || key(previous.point) === cursor) break;
     path.push(previous.point);
     cursor = key(previous.point);
   }
 
-  return compactPoints([start, ...path.reverse(), end]);
+  return normalizeRoute([startNode, ...path.reverse(), endNode]);
 }
 
 function blankState() {
@@ -196,10 +246,12 @@ function direct(graph, from, to, edge) {
 
 function findPaths(graph, start, goal) {
   const paths = [];
-  const stack = [{ node: start, seen: new Set([start]), path: [] }];
+  const queue = [{ node: start, seen: new Set([start]), path: [] }];
+  const maxPathLength = 24;
+  const maxPaths = 250;
 
-  while (stack.length && paths.length < 250) {
-    const current = stack.pop();
+  while (queue.length && paths.length < maxPaths) {
+    const current = queue.shift();
 
     if (current.node === goal && current.path.length) {
       paths.push(current.path);
@@ -207,10 +259,10 @@ function findPaths(graph, start, goal) {
     }
 
     for (const edge of graph.get(current.node) || []) {
-      if (current.seen.has(edge.to) || current.path.length > 24) continue;
+      if (current.seen.has(edge.to) || current.path.length >= maxPathLength) continue;
       const seen = new Set(current.seen);
       seen.add(edge.to);
-      stack.push({ node: edge.to, seen, path: [...current.path, edge] });
+      queue.push({ node: edge.to, seen, path: [...current.path, edge] });
     }
   }
 
@@ -253,7 +305,7 @@ function describeGraph(graph) {
   };
 }
 
-export function buildNetlist(components, wires) {
+export function buildNetlist(components, wires, analysis = 'dc') {
   const parent = new Map();
   const terminals = components.flatMap((component) =>
     (PARTS[component.type]?.ports || []).map((port) => termKey({ componentId: component.id, portId: port.id })),
@@ -291,10 +343,17 @@ export function buildNetlist(components, wires) {
     return `* Unsupported ${component.type}`;
   });
 
-  return ['* ElecZen netlist', ...lines, '.model DLED D(Is=1e-20 N=2)', '.op', '.end'].join('\n');
+  const analysisDirective =
+    analysis === 'ac'
+      ? '.ac dec 20 10 1e6'
+      : analysis === 'transient'
+        ? '.tran 1u 10m'
+        : '.op';
+
+  return ['* ElecZen netlist', ...lines, '.model DLED D(Is=1e-20 N=2)', analysisDirective, '.end'].join('\n');
 }
 
-export function simulateCircuit(components, wires) {
+export function simulateCircuit(components, wires, analysis = 'dc') {
   const byId = new Map(components.map((component) => [component.id, component]));
   const states = Object.fromEntries(components.map((component) => [component.id, blankState()]));
   const graph = new Map();
@@ -391,7 +450,7 @@ export function simulateCircuit(components, wires) {
     message,
     states,
     stats: totals,
-    netlist: buildNetlist(components, wires),
+    netlist: buildNetlist(components, wires, analysis),
     graph: describeGraph(graph),
   };
 }

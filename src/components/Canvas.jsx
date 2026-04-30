@@ -1,11 +1,14 @@
 import { For, createSignal } from 'solid-js';
 import {
   PARTS,
+  beginWireEdit,
+  cancelWireEdit,
   clearSelection,
   components,
   connectPort,
   connectTerminals,
   deleteItem,
+  finishWireEdit,
   remember,
   moveComponent,
   panViewport,
@@ -19,6 +22,7 @@ import {
   setZoom,
   settings,
   viewport,
+  wireEditTarget,
   wires,
 } from '../store/state.js';
 
@@ -182,7 +186,7 @@ export default function Canvas() {
   };
 
   const startWire = (event, component, port) => {
-    if (settings().tool === 'delete') return;
+    if (settings().tool === 'delete' || settings().tool === 'wire-edit') return;
     event.stopPropagation();
     const point = portPoint(component, port.id);
     setWireDraft({ from: { componentId: component.id, portId: port.id }, start: point, point, active: false });
@@ -239,7 +243,13 @@ export default function Canvas() {
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           clearSelection();
-          if (settings().tool === 'pan') startPan(event);
+          if (settings().tool === 'pan') {
+            startPan(event);
+            return;
+          }
+          if (settings().tool === 'wire-edit') {
+            cancelWireEdit();
+          }
         }}
       >
         <defs>
@@ -261,14 +271,24 @@ export default function Canvas() {
         <g transform={`translate(${viewport().x} ${viewport().y}) scale(${viewport().zoom})`}>
           <For each={wires()}>
             {(wire) => {
+              const editing = wireEditTarget()?.wireId === wire.id;
               return (
                 <path
                   d={wirePath(wire.from, wire.to)}
-                  class={`wire ${isSelected('wire', wire.id) ? 'selected' : ''}`}
+                  class={`wire ${isSelected('wire', wire.id) ? 'selected' : ''} ${editing ? 'editing' : ''}`}
                   onClick={(event) => {
                     event.stopPropagation();
                     if (settings().tool === 'delete') {
                       deleteItem('wire', wire.id);
+                      return;
+                    }
+                    if (settings().tool === 'wire-edit') {
+                      selectWire(wire.id);
+                      const clickPoint = pointFromEvent(event);
+                      const fromPoint = terminalPoint(wire.from);
+                      const toPoint = terminalPoint(wire.to);
+                      const endpoint = Math.hypot(clickPoint.x - fromPoint.x, clickPoint.y - fromPoint.y) <= Math.hypot(clickPoint.x - toPoint.x, clickPoint.y - toPoint.y) ? 'from' : 'to';
+                      beginWireEdit(wire.id, endpoint);
                       return;
                     }
                     selectWire(wire.id);
@@ -304,6 +324,10 @@ export default function Canvas() {
                           event.stopPropagation();
                           if (suppressClick) return;
                           if (settings().tool === 'delete') return;
+                          if (settings().tool === 'wire-edit' && wireEditTarget()) {
+                            finishWireEdit(component.id, port.id);
+                            return;
+                          }
                           connectPort(component.id, port.id);
                         }}
                       >

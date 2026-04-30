@@ -1,8 +1,13 @@
 {
   "name": "server",
-  "module": "index.ts",
+  "main": "index.js",
+  "module": "index.js",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun run index.js",
+    "start": "bun run index.js"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -10,6 +15,10 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "hono": "^4.12.15"
+    "@better-auth/drizzle-adapter": "^1.6.9",
+    "better-auth": "^1.6.9",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.15",
+    "pg": "^8.20.0"
   }
 }

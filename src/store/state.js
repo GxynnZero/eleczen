@@ -10,6 +10,8 @@ const ready = (message = 'Ready') => ({
   message,
   stats: { current: 0, voltage: 0, resistance: 0 },
   graph: emptyGraph,
+  analysis: 'dc',
+  probes: [],
   engine: { mode: 'local', status: 'idle', raw: null },
   netlist: '',
 });
@@ -34,7 +36,11 @@ const [components, setComponents] = createSignal(demoComponents.map(withState));
 const [wires, setWires] = createSignal(demoWires);
 const [selection, setSelection] = createSignal({ type: 'component', id: 'battery_1' });
 const [pendingPort, setPendingPort] = createSignal(null);
+const [wireEditTarget, setWireEditTarget] = createSignal(null);
+const [analysisMode, setAnalysisMode] = createSignal('dc');
+const [probeVariables, setProbeVariables] = createSignal([]);
 const [simulationRunning, setSimulationRunning] = createSignal(false);
+let currentSimulationAbort = null;
 const [simulation, setSimulation] = createSignal(ready('Demo circuit loaded'));
 const [history, setHistory] = createSignal([]);
 const [future, setFuture] = createSignal([]);
@@ -42,7 +48,7 @@ const [viewport, setViewport] = createSignal({ x: 0, y: 0, zoom: 1 });
 const [settings, setSettings] = createSignal({
   autoRun: false,
   console: true,
-  engine: 'local',
+  engine: 'eecircuit',
   grid: true,
   routing: 'smart',
   showLabels: true,
@@ -66,25 +72,81 @@ export function remember() {
 }
 
 function applyLocalSimulation(extra = {}) {
-  const result = simulateCircuit(components(), wires());
-  const merged = { ...result, engine: { mode: 'local', status: 'ready', raw: null }, ...extra };
+  const result = simulateCircuit(components(), wires(), analysisMode());
+  const merged = {
+    ...result,
+    analysis: analysisMode(),
+    probes: probeVariables(),
+    engine: { mode: 'local', status: 'ready', raw: null },
+    ...extra,
+  };
   setComponents((items) => items.map((item) => ({ ...item, state: result.states[item.id] || blankState() })));
   setSimulation(merged);
   return merged;
 }
 
-async function applySimulation() {
-  const local = applyLocalSimulation();
+async function applySimulation(signal = { aborted: false }) {
+  const local = applyLocalSimulation({
+    engine: { mode: 'local', status: 'running', raw: null },
+    message: 'Running simulation...',
+  });
 
-  if (settings().engine !== 'eecircuit') {
-    return local;
+  if (signal.aborted) {
+    const abortedResult = {
+      ...local,
+      analysis: analysisMode(),
+      probes: probeVariables(),
+      engine: {
+        ...local.engine,
+        status: 'stopped',
+        raw: null,
+      },
+      message: `${local.message} canceled.`,
+    };
+    setSimulation(abortedResult);
+    return abortedResult;
+  }
+
+  if (settings().engine === 'local') {
+    const result = {
+      ...local,
+      analysis: analysisMode(),
+      probes: probeVariables(),
+      engine: {
+        mode: 'local',
+        status: 'ready',
+        raw: null,
+      },
+      message: `${local.message} local simulation completed.`,
+    };
+    setSimulation(result);
+    return result;
   }
 
   try {
     const { runEeCircuitSimulation } = await import('../simulation/eecircuitEngine.js');
-    const raw = await runEeCircuitSimulation(local.netlist);
+    const raw = await runEeCircuitSimulation(local.netlist, analysisMode());
+
+    if (signal.aborted) {
+      const abortedResult = {
+        ...local,
+        analysis: analysisMode(),
+        probes: probeVariables(),
+        engine: {
+          ...local.engine,
+          status: 'stopped',
+          raw: null,
+        },
+        message: `${local.message} canceled.`,
+      };
+      setSimulation(abortedResult);
+      return abortedResult;
+    }
+
     const result = {
       ...local,
+      analysis: analysisMode(),
+      probes: probeVariables(),
       engine: {
         mode: 'eecircuit',
         status: 'ready',
@@ -95,8 +157,26 @@ async function applySimulation() {
     setSimulation(result);
     return result;
   } catch (error) {
+    if (signal.aborted) {
+      const abortedResult = {
+        ...local,
+        analysis: analysisMode(),
+        probes: probeVariables(),
+        engine: {
+          ...local.engine,
+          status: 'stopped',
+          raw: null,
+        },
+        message: `${local.message} canceled.`,
+      };
+      setSimulation(abortedResult);
+      return abortedResult;
+    }
+
     const result = {
       ...local,
+      analysis: analysisMode(),
+      probes: probeVariables(),
       engine: {
         mode: 'eecircuit',
         status: 'failed',
@@ -149,6 +229,58 @@ export function selectWire(id) {
   setSelection({ type: 'wire', id });
 }
 
+export function beginWireEdit(wireId, endpoint) {
+  const wire = wires().find((item) => item.id === wireId);
+  if (!wire) return;
+  remember();
+  setSelection({ type: 'wire', id: wireId });
+  setWireEditTarget({ wireId, endpoint });
+  pushLog(`Editing ${wireId} ${endpoint}`);
+}
+
+export function cancelWireEdit() {
+  setWireEditTarget(null);
+}
+
+export function finishWireEdit(componentId, portId) {
+  const edit = wireEditTarget();
+  const selected = selection();
+  const targetWireId = edit?.wireId || (selected?.type === 'wire' ? selected.id : null);
+  if (!targetWireId) return false;
+
+  const wire = wires().find((item) => item.id === targetWireId);
+  if (!wire) return false;
+
+  const endpoint = edit?.endpoint || 'to';
+  const newTerminal = { componentId, portId };
+  const currentOther = endpoint === 'from' ? wire.to : wire.from;
+
+  if (sameTerminal(currentOther, newTerminal) || sameTerminal(wire.from, wire.to) || currentOther.componentId === newTerminal.componentId) {
+    setWireEditTarget(null);
+    pushLog('Wire edit cancelled: invalid terminal', 'warn');
+    return false;
+  }
+
+  if (wires().some((item) => item.id !== wire.id && sameWire(item, endpoint === 'from' ? newTerminal : wire.from, endpoint === 'from' ? wire.to : newTerminal))) {
+    setWireEditTarget(null);
+    pushLog('Wire edit cancelled: duplicate connection', 'warn');
+    return false;
+  }
+
+  remember();
+  setWires((items) =>
+    items.map((item) =>
+      item.id === wire.id
+        ? { ...item, [endpoint]: newTerminal }
+        : item,
+    ),
+  );
+
+  setWireEditTarget(null);
+  markChanged('Wire endpoint updated');
+  return true;
+}
+
 export function clearSelection() {
   setSelection({ type: null, id: null });
 }
@@ -160,6 +292,12 @@ export function setOption(name, value) {
   if (name === 'autoRun' && value) {
     applySimulation().then((result) => pushLog(result.message, result.ok ? 'success' : 'warn'));
   }
+}
+
+export function toggleProbeVariable(name) {
+  setProbeVariables((current) =>
+    current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
+  );
 }
 
 export function undo() {
@@ -401,11 +539,48 @@ export function resetView() {
 }
 
 export async function runSimulation() {
+  if (simulationRunning()) return;
   setSimulationRunning(true);
+
+  if (currentSimulationAbort) {
+    currentSimulationAbort.abort();
+    currentSimulationAbort = null;
+  }
+
+  currentSimulationAbort = new AbortController();
+  const signal = currentSimulationAbort.signal;
+
+  setSimulation((current) => ({
+    ...current,
+    engine: { ...current.engine, status: 'running' },
+    message: 'Simulation running...',
+  }));
+
   await new Promise((resolve) => setTimeout(resolve, 80));
-  const result = await applySimulation();
-  pushLog(result.message, result.ok ? 'success' : 'warn');
-  setSimulationRunning(false);
+  const result = await applySimulation(signal);
+
+  if (!signal.aborted) {
+    pushLog(result.message, result.ok ? 'success' : 'warn');
+    setSimulationRunning(false);
+  }
+
+  currentSimulationAbort = null;
 }
 
-export { components, wires, selection, pendingPort, simulation, simulationRunning, settings, logs, history, future, viewport };
+export function stopSimulation() {
+  if (!simulationRunning()) return;
+  if (currentSimulationAbort) {
+    currentSimulationAbort.abort();
+    currentSimulationAbort = null;
+  }
+
+  setSimulationRunning(false);
+  setSimulation((current) => ({
+    ...current,
+    engine: { ...current.engine, status: 'stopped' },
+    message: 'Simulation stopped by user.',
+  }));
+  pushLog('Simulation stopped by user.', 'warn');
+}
+
+export { components, wires, selection, pendingPort, wireEditTarget, analysisMode, setAnalysisMode, probeVariables, simulation, simulationRunning, settings, logs, history, future, viewport };

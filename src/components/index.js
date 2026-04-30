@@ -14,12 +14,15 @@ const icons = {
     switch: Lightbulb,
 };
 
+import ConsolePanel from './ConsolePanel'
+
 export {
     TopBar,
     ToolBar,
     PropertiesPanel,
     Canvas,
     ComponentsPanel,
+    ConsolePanel,
     ToolsPanel,
     icons
 }

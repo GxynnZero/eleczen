@@ -1,5 +1,5 @@
 import { createMemo, Show } from "solid-js";
-import { partValue, selectedComponent, selectedWire, setComponentValue, settings, simulation } from "../store/state";
+import { partValue, selectedComponent, selectedWire, setComponentValue, settings, simulation, wireEditTarget } from "../store/state";
 import { CircleOff } from "lucide-solid";
 
 const Inspector = () => {
@@ -48,7 +48,12 @@ const Inspector = () => {
                 </label>
                 <label class="field editable">
                     <span>Netlist</span>
-                    <textarea class="disabled" value={""} onChange={simulation.netlist}></textarea>
+                    <textarea
+                        class="disabled"
+                        rows="8"
+                        readonly
+                        value={simulation()?.netlist || ''}
+                    />
                 </label>
             </Show>
 
@@ -57,6 +62,12 @@ const Inspector = () => {
                     <span>Wire</span>
                     <strong>{wire()?.id}</strong>
                 </div>
+                <Show when={settings().tool === 'wire-edit'}>
+                    <div class="field info">
+                        <span>Wire edit</span>
+                        <strong>{wireEditTarget()?.endpoint ? `Editing ${wireEditTarget().endpoint}` : 'Tap a wire endpoint'}</strong>
+                    </div>
+                </Show>
             </Show>
 
             <Show when={!component() && !wire()}>

@@ -1,10 +1,59 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show, onCleanup, onMount } from "solid-js";
+import { A, useNavigate } from "@solidjs/router";
+import { user, loadSession, logoutRequest } from "../store/auth.js";
+import {
+    settings,
+    setOption,
+    loadDemo,
+    loadSavedProject,
+    saveProject,
+    clearAll,
+    loadProject,
+} from "../store/state.js";
 
 function TopBar() {
-    const [user, setUser] = createSignal({
-        name: "Gagan",
-        email: "gagan@mail.com"
+    let importInput;
+    const [activeMenu, setActiveMenu] = createSignal(null);
+    const navigate = useNavigate();
+
+    const closeMenu = () => setActiveMenu(null);
+    const toggleMenu = (menu, e) => {
+        e.stopPropagation();
+        setActiveMenu(activeMenu() === menu ? null : menu);
+    };
+
+    const downloadText = (filename, text, type = "text/plain") => {
+        const url = URL.createObjectURL(new Blob([text], { type }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const importProjectFile = async (file) => {
+        if (!file) return;
+        const text = await file.text();
+        loadProject(text);
+        importInput.value = "";
+        closeMenu();
+    };
+
+    onMount(async () => {
+        await loadSession();
+        window.addEventListener("click", closeMenu);
     });
+
+    onCleanup(() => {
+        window.removeEventListener("click", closeMenu);
+    });
+
+    const handleLogout = async () => {
+        await logoutRequest();
+        navigate("/");
+    };
+
+    const activeUser = user;
 
 
 
@@ -80,33 +129,42 @@ function TopBar() {
 
                 {/* AUTH */}
                 <Show
-                    when={user()}
+                    when={activeUser()}
                     fallback={
                         <div class="flex items-center gap-2">
-                            <a
+                            <A
                                 href="/login"
                                 class="px-4 py-2 rounded-xl text-sm text-zinc-300 hover:text-white transition"
                             >
                                 Login
-                            </a>
+                            </A>
 
-                            <a
+                            <A
                                 href="/signup"
                                 class="px-4 py-2 rounded-xl text-sm font-medium text-black bg-gradient-to-r from-cyan-400 to-emerald-400 hover:scale-105 transition"
                             >
                                 Sign Up
-                            </a>
+                            </A>
                         </div>
                     }
                 >
-                    <a
-                        href="/account"
-                        class="flex items-center gap-3 p-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition"
-                    >
-                        <div class="h-9 w-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-black font-bold">
-                            {user()?.name?.charAt(0) || "U"}
-                        </div>
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <A
+                            href="/editor"
+                            class="flex items-center gap-3 p-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition"
+                        >
+                            <div class="h-9 w-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-black font-bold">
+                                {activeUser()?.name?.charAt(0) || "U"}
+                            </div>
+                        </A>
+                        <button
+                            type="button"
+                            onClick={handleLogout}
+                            class="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </Show>
 
             </div>

@@ -39,9 +39,19 @@ export default function MiniMap() {
   };
 
   onMount(async () => {
-    const [{ Application, Graphics }, { Viewport }] = await Promise.all([import('pixi.js'), import('pixi-viewport')]);
+    const [{ Application, Graphics }, { Viewport }] = await Promise.all([
+      import('pixi.js'),
+      import('pixi-viewport')
+    ]);
+
     app = new Application();
-    await app.init({ resizeTo: root, backgroundAlpha: 0, antialias: true });
+
+    await app.init({
+      resizeTo: root,
+      backgroundAlpha: 0,
+      antialias: true,
+    });
+
     root.appendChild(app.canvas);
 
     viewportLayer = new Viewport({
@@ -66,7 +76,12 @@ export default function MiniMap() {
   });
 
   onCleanup(() => {
-    app?.destroy(true, { children: true });
+    if (!app) return;
+    try {
+      app.destroy(true, { children: true, texture: true, baseTexture: true });
+    } catch (error) {
+      console.warn('MiniMap cleanup failed:', error);
+    }
   });
 
   return (
