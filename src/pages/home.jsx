@@ -715,7 +715,7 @@ export default function Home() {
                             </div>
                         </div>
 
-                        <TestimonialsCarousel />
+                        {/* <TestimonialsCarousel /> */}
                     </div>
                 </Reveal>
             </section>
