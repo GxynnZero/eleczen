@@ -18,18 +18,20 @@ const ready = (message = 'Ready') => ({
 
 const demoComponents = [
   { id: 'battery_1', type: 'battery', x: 220, y: 350, rotation: 0, properties: { voltage: 9 } },
-  { id: 'resistor_2', type: 'resistor', x: 220, y: 170, rotation: 0, properties: { resistance: 1000 } },
-  { id: 'led_3', type: 'led', x: 520, y: 170, rotation: 0, properties: { forwardVoltage: 2 } },
+  { id: 'switch_2', type: 'switch', x: 220, y: 170, rotation: 0, properties: { resistance: 0.1 } },
+  { id: 'resistor_3', type: 'resistor', x: 420, y: 170, rotation: 0, properties: { resistance: 330 } },
+  { id: 'led_4', type: 'led', x: 620, y: 170, rotation: 0, properties: { forwardVoltage: 2 } },
 ];
 
 const demoWires = [
-  { id: 'wire_1', from: { componentId: 'battery_1', portId: 'pos' }, to: { componentId: 'resistor_2', portId: 'a' } },
-  { id: 'wire_2', from: { componentId: 'resistor_2', portId: 'b' }, to: { componentId: 'led_3', portId: 'anode' } },
-  { id: 'wire_3', from: { componentId: 'led_3', portId: 'cathode' }, to: { componentId: 'battery_1', portId: 'neg' } },
+  { id: 'wire_1', from: { componentId: 'battery_1', portId: 'pos' }, to: { componentId: 'switch_2', portId: 'a' }, anchors: [] },
+  { id: 'wire_2', from: { componentId: 'switch_2', portId: 'b' }, to: { componentId: 'resistor_3', portId: 'a' }, anchors: [] },
+  { id: 'wire_3', from: { componentId: 'resistor_3', portId: 'b' }, to: { componentId: 'led_4', portId: 'anode' }, anchors: [] },
+  { id: 'wire_4', from: { componentId: 'led_4', portId: 'cathode' }, to: { componentId: 'battery_1', portId: 'neg' }, anchors: [{ x: 674, y: 350 }] },
 ];
 
-let nextComponent = 4;
-let nextWire = 4;
+let nextComponent = 5;
+let nextWire = 5;
 
 const withState = (component) => ({ ...component, state: blankState() });
 const [components, setComponents] = createSignal(demoComponents.map(withState));
@@ -55,7 +57,13 @@ const [settings, setSettings] = createSignal({
   snap: true,
   snapSize: 12,
   tool: 'select',
+  consoleMaximized: false,
 });
+
+export function toggleConsoleMaximized() {
+  setSettings((prev) => ({ ...prev, consoleMaximized: !prev.consoleMaximized }));
+}
+
 const [logs, setLogs] = createSignal([{ level: 'info', text: 'Demo circuit loaded' }]);
 
 function pushLog(text, level = 'info') {
@@ -295,9 +303,18 @@ export function setOption(name, value) {
 }
 
 export function toggleProbeVariable(name) {
-  setProbeVariables((current) =>
-    current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
-  );
+  const lowerName = name.toLowerCase();
+  setProbeVariables((current) => {
+    const existing = current.find(item => item.toLowerCase() === lowerName);
+    if (existing) {
+      return current.filter(item => item !== existing);
+    }
+    // Try to find the exact case from the simulation raw data if possible,
+    // otherwise just add what we got.
+    const simRaw = simulation()?.engine?.raw;
+    const exactName = simRaw?.variableNames?.find(v => v.toLowerCase() === lowerName) || name;
+    return [...current, exactName];
+  });
 }
 
 export function undo() {
@@ -385,6 +402,17 @@ export function rotateSelected() {
   markChanged('Rotated selection');
 }
 
+export function mirrorSelected() {
+  const component = selectedComponent();
+  if (!component) return;
+
+  remember();
+  setComponents((items) =>
+    items.map((item) => (item.id === component.id ? { ...item, mirror: !item.mirror } : item)),
+  );
+  markChanged('Mirrored selection');
+}
+
 export function duplicateSelected() {
   const component = selectedComponent();
   if (!component) return;
@@ -427,7 +455,7 @@ export function setComponentValue(id, value) {
   markChanged('Value changed');
 }
 
-export function connectTerminals(from, to) {
+export function connectTerminals(from, to, anchors = []) {
   if (!from || !to || sameTerminal(from, to) || from.componentId === to.componentId || wires().some((wire) => sameWire(wire, from, to))) {
     setPendingPort(null);
     pushLog('Wire was not connected', 'warn');
@@ -435,10 +463,21 @@ export function connectTerminals(from, to) {
   }
 
   remember();
-  setWires((items) => [...items, { id: `wire_${nextWire++}`, from, to }]);
+  setWires((items) => [...items, { id: `wire_${nextWire++}`, from, to, anchors }]);
   setPendingPort(null);
   markChanged('Wire connected');
   return true;
+}
+
+export function updateAnchor(wireId, anchorIndex, x, y) {
+  remember();
+  setWires((items) => items.map((item) => {
+    if (item.id !== wireId) return item;
+    const anchors = [...(item.anchors || [])];
+    anchors[anchorIndex] = { x, y };
+    return { ...item, anchors };
+  }));
+  markChanged('Wire anchor moved');
 }
 
 export function connectPort(componentId, portId) {

@@ -2,7 +2,7 @@
 
 import { createSignal } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
-import { loginRequest } from "../store/auth.js";
+import { loginRequest, loginWithOAuth } from "../store/auth.js";
 import {
     Mail,
     Lock,
@@ -148,11 +148,19 @@ export default function Login() {
 
                 {/* Social */}
                 <div class="grid gap-3">
-                    <button class="rounded-2xl border border-white/10 bg-white/5 py-3 hover:bg-white/10 transition">
+                    <button 
+                        type="button"
+                        onClick={() => loginWithOAuth('google')}
+                        class="rounded-2xl border border-white/10 bg-white/5 py-3 hover:bg-white/10 transition"
+                    >
                         Continue with Google
                     </button>
 
-                    <button class="rounded-2xl border border-white/10 bg-white/5 py-3 hover:bg-white/10 transition">
+                    <button 
+                        type="button"
+                        onClick={() => loginWithOAuth('github')}
+                        class="rounded-2xl border border-white/10 bg-white/5 py-3 hover:bg-white/10 transition"
+                    >
                         Continue with GitHub
                     </button>
                 </div>

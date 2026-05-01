@@ -1,7 +1,8 @@
-// src/pages/Signup.jsx
 import { createSignal, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
+
 import { registerRequest } from "../store/auth.js";
+
 import {
     Mail,
     Lock,
@@ -15,9 +16,15 @@ import {
 export default function Signup() {
     const navigate = useNavigate();
 
+    /* =========================================
+       State
+    ========================================= */
+
     const [step, setStep] = createSignal(1);
-    const [error, setError] = createSignal(null);
-    const [loading, setLoading] = createSignal(false);
+    const [loading, setLoading] =
+        createSignal(false);
+    const [error, setError] =
+        createSignal("");
 
     const [form, setForm] = createSignal({
         fullname: "",
@@ -28,47 +35,122 @@ export default function Signup() {
         agree: false,
     });
 
+    /* =========================================
+       Helpers
+    ========================================= */
+
     const update = (key, value) => {
-        setForm((prev) => ({ ...prev, [key]: value }));
+        setForm((prev) => ({
+            ...prev,
+            [key]: value,
+        }));
     };
 
     const next = () => {
-        if (step() < 3) setStep(step() + 1);
+        setError("");
+
+        if (step() === 1) {
+            if (
+                !form().fullname.trim() &&
+                !form().username.trim()
+            ) {
+                setError(
+                    "Enter full name or username."
+                );
+                return;
+            }
+        }
+
+        if (step() === 2) {
+            if (!form().email.trim()) {
+                setError("Email required.");
+                return;
+            }
+
+            if (
+                form().password.length < 8
+            ) {
+                setError(
+                    "Password must be at least 8 characters."
+                );
+                return;
+            }
+        }
+
+        if (step() < 3) {
+            setStep(step() + 1);
+        }
     };
 
     const back = () => {
-        if (step() > 1) setStep(step() - 1);
+        setError("");
+
+        if (step() > 1) {
+            setStep(step() - 1);
+        }
     };
+
+    /* =========================================
+       Submit
+    ========================================= */
 
     const submit = async (e) => {
         e.preventDefault();
-        setError(null);
 
-        if (form().password !== form().confirmPassword) {
-            setError("Passwords do not match.");
+        setError("");
+
+        if (
+            form().password !==
+            form().confirmPassword
+        ) {
+            setError(
+                "Passwords do not match."
+            );
             return;
         }
 
         if (!form().agree) {
-            setError("You must agree to the terms and privacy policy.");
+            setError(
+                "You must accept Terms & Privacy Policy."
+            );
             return;
         }
 
-        setLoading(true);
-        const result = await registerRequest({
-            name: form().fullname || form().username || form().email,
-            email: form().email,
-            password: form().password,
-        });
-        setLoading(false);
+        try {
+            setLoading(true);
 
-        if (result.ok) {
-            navigate("/editor");
-            return;
+            const result =
+                await registerRequest({
+                    name:
+                        form().fullname ||
+                        form().username,
+                    email: form().email,
+                    password:
+                        form().password,
+                });
+
+            if (result?.ok) {
+                navigate("/editor");
+                return;
+            }
+
+            setError(
+                result?.message ||
+                "Signup failed."
+            );
+        } catch (err) {
+            setError(
+                err?.message ||
+                "Signup failed."
+            );
+        } finally {
+            setLoading(false);
         }
-
-        setError(result.message || "Unable to register. Please try again.");
     };
+
+    /* =========================================
+       UI
+    ========================================= */
 
     return (
         <div class="min-h-screen bg-[#05070b] text-white overflow-y-auto">
@@ -81,15 +163,18 @@ export default function Signup() {
 
             <div class="px-6 py-12">
                 <div class="mx-auto max-w-xl">
-                    {/* Logo */}
+                    {/* Header */}
                     <div class="mb-8 text-center">
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 font-black text-black text-xl">
                             EZ
                         </div>
 
-                        <h1 class="mt-5 text-4xl font-black">Create Account</h1>
+                        <h1 class="mt-5 text-4xl font-black">
+                            Create Account
+                        </h1>
+
                         <p class="mt-2 text-zinc-400">
-                            Join ElecZen in just 3 simple steps.
+                            Join ElecZen in 3 steps.
                         </p>
                     </div>
 
@@ -100,126 +185,50 @@ export default function Signup() {
                     >
                         {/* Progress */}
                         <div class="mb-10">
-                            <div class="flex items-center justify-between text-sm text-zinc-400 mb-4">
-                                <span>Step {step()} of 3</span>
-                                <span>{Math.floor((step() / 3) * 100)}%</span>
+                            <div class="mb-4 flex items-center justify-between text-sm text-zinc-400">
+                                <span>
+                                    Step {step()} of 3
+                                </span>
+
+                                <span>
+                                    {Math.floor(
+                                        (step() / 3) * 100
+                                    )}
+                                    %
+                                </span>
                             </div>
 
-                            <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                            <div class="h-2 overflow-hidden rounded-full bg-white/10">
                                 <div
                                     class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
-                                    style={{ width: `${(step() / 3) * 100}%` }}
+                                    style={{
+                                        width: `${(step() / 3) * 100
+                                            }%`,
+                                    }}
                                 />
                             </div>
                         </div>
 
-                        {/* STEP 1 */}
+                        {/* STEP CONTENT */}
                         <Show when={step() === 1}>
-                            <div class="space-y-5">
-                                <h2 class="text-2xl font-bold">Personal Info</h2>
-
-                                <div>
-                                    <label class="text-sm text-zinc-400">Full Name</label>
-                                    <div class="mt-2 flex items-center rounded-2xl border border-white/10 bg-white/5 px-4">
-                                        <User size={18} class="text-zinc-500" />
-                                        <input
-                                            type="text"
-                                            placeholder="Your full name"
-                                            class="w-full bg-transparent px-3 py-4 outline-none"
-                                            value={form().fullname}
-                                            onInput={(e) => update("fullname", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm text-zinc-400">Username</label>
-                                    <div class="mt-2 flex items-center rounded-2xl border border-white/10 bg-white/5 px-4">
-                                        <User size={18} class="text-zinc-500" />
-                                        <input
-                                            type="text"
-                                            placeholder="Choose username"
-                                            class="w-full bg-transparent px-3 py-4 outline-none"
-                                            value={form().username}
-                                            onInput={(e) => update("username", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                            <StepOne
+                                form={form}
+                                update={update}
+                            />
                         </Show>
 
-                        {/* STEP 2 */}
                         <Show when={step() === 2}>
-                            <div class="space-y-5">
-                                <h2 class="text-2xl font-bold">Account Details</h2>
-
-                                <div>
-                                    <label class="text-sm text-zinc-400">Email</label>
-                                    <div class="mt-2 flex items-center rounded-2xl border border-white/10 bg-white/5 px-4">
-                                        <Mail size={18} class="text-zinc-500" />
-                                        <input
-                                            type="email"
-                                            placeholder="you@example.com"
-                                            class="w-full bg-transparent px-3 py-4 outline-none"
-                                            value={form().email}
-                                            onInput={(e) => update("email", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="text-sm text-zinc-400">Password</label>
-                                    <div class="mt-2 flex items-center rounded-2xl border border-white/10 bg-white/5 px-4">
-                                        <Lock size={18} class="text-zinc-500" />
-                                        <input
-                                            type="password"
-                                            placeholder="••••••••"
-                                            class="w-full bg-transparent px-3 py-4 outline-none"
-                                            value={form().password}
-                                            onInput={(e) => update("password", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
+                            <StepTwo
+                                form={form}
+                                update={update}
+                            />
                         </Show>
 
-                        {/* STEP 3 */}
                         <Show when={step() === 3}>
-                            <div class="space-y-5">
-                                <h2 class="text-2xl font-bold">Security & Finish</h2>
-
-                                <div>
-                                    <label class="text-sm text-zinc-400">Confirm Password</label>
-                                    <div class="mt-2 flex items-center rounded-2xl border border-white/10 bg-white/5 px-4">
-                                        <Shield size={18} class="text-zinc-500" />
-                                        <input
-                                            type="password"
-                                            placeholder="Repeat password"
-                                            class="w-full bg-transparent px-3 py-4 outline-none"
-                                            value={form().confirmPassword}
-                                            onInput={(e) =>
-                                                update("confirmPassword", e.target.value)
-                                            }
-                                        />
-                                    </div>
-                                </div>
-
-                                <label class="flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={form().agree}
-                                        onInput={(e) => update("agree", e.target.checked)}
-                                    />
-                                    <span class="text-sm text-zinc-300">
-                                        I agree to Terms & Privacy Policy
-                                    </span>
-                                </label>
-
-                                <div class="rounded-2xl bg-cyan-500/10 border border-cyan-400/20 p-4 text-sm text-cyan-200">
-                                    <Check size={16} class="inline mr-2" />
-                                    Your workspace will be ready instantly after signup.
-                                </div>
-                            </div>
+                            <StepThree
+                                form={form}
+                                update={update}
+                            />
                         </Show>
 
                         {/* Buttons */}
@@ -228,10 +237,12 @@ export default function Signup() {
                                 <button
                                     type="button"
                                     onClick={back}
-                                    class="flex-1 rounded-2xl border border-white/10 bg-white/5 py-4 font-semibold hover:bg-white/10 transition"
+                                    class="flex-1 rounded-2xl border border-white/10 bg-white/5 py-4 font-semibold hover:bg-white/10"
                                 >
                                     <span class="inline-flex items-center gap-2">
-                                        <ChevronLeft size={18} />
+                                        <ChevronLeft
+                                            size={18}
+                                        />
                                         Back
                                     </span>
                                 </button>
@@ -242,41 +253,228 @@ export default function Signup() {
                                 fallback={
                                     <button
                                         type="submit"
-                                        disabled={loading()}
-                                        class="flex-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-semibold hover:scale-[1.02] transition disabled:opacity-70"
+                                        disabled={
+                                            loading()
+                                        }
+                                        class="flex-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-semibold disabled:opacity-70"
                                     >
-                                        {loading() ? 'Creating...' : 'Create Account'}
+                                        {loading()
+                                            ? "Creating..."
+                                            : "Create Account"}
                                     </button>
                                 }
                             >
                                 <button
                                     type="button"
                                     onClick={next}
-                                    class="flex-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-semibold hover:scale-[1.02] transition"
+                                    class="flex-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-semibold"
                                 >
-                                    <span class="inline-flex items-center gap-2">
-                                        Continue
-                                        <ChevronRight size={18} />
-                                    </span>
+                                    Continue
                                 </button>
                             </Show>
                         </div>
 
-                        {error() && (
+                        {/* Error */}
+                        <Show when={error()}>
                             <div class="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
                                 {error()}
                             </div>
-                        )}
+                        </Show>
 
                         {/* Footer */}
                         <p class="mt-8 text-center text-sm text-zinc-400">
-                            Already have an account?{" "}
-                            <A href="/login" class="text-cyan-300 hover:text-white">
+                            Already have an
+                            account?{" "}
+                            <A
+                                href="/login"
+                                class="text-cyan-300 hover:text-white"
+                            >
                                 Login
                             </A>
                         </p>
                     </form>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+/* =========================================
+   Steps
+========================================= */
+
+function StepOne(props) {
+    return (
+        <div class="space-y-5">
+            <h2 class="text-2xl font-bold">
+                Personal Info
+            </h2>
+
+            <InputBox
+                icon={User}
+                label="Full Name"
+                value={
+                    props.form().fullname
+                }
+                placeholder="Your full name"
+                onInput={(v) =>
+                    props.update(
+                        "fullname",
+                        v
+                    )
+                }
+            />
+
+            <InputBox
+                icon={User}
+                label="Username"
+                value={
+                    props.form().username
+                }
+                placeholder="Choose username"
+                onInput={(v) =>
+                    props.update(
+                        "username",
+                        v
+                    )
+                }
+            />
+        </div>
+    );
+}
+
+function StepTwo(props) {
+    return (
+        <div class="space-y-5">
+            <h2 class="text-2xl font-bold">
+                Account Details
+            </h2>
+
+            <InputBox
+                icon={Mail}
+                label="Email"
+                type="email"
+                value={
+                    props.form().email
+                }
+                placeholder="you@example.com"
+                onInput={(v) =>
+                    props.update(
+                        "email",
+                        v
+                    )
+                }
+            />
+
+            <InputBox
+                icon={Lock}
+                label="Password"
+                type="password"
+                value={
+                    props.form().password
+                }
+                placeholder="••••••••"
+                onInput={(v) =>
+                    props.update(
+                        "password",
+                        v
+                    )
+                }
+            />
+        </div>
+    );
+}
+
+function StepThree(props) {
+    return (
+        <div class="space-y-5">
+            <h2 class="text-2xl font-bold">
+                Security & Finish
+            </h2>
+
+            <InputBox
+                icon={Shield}
+                label="Confirm Password"
+                type="password"
+                value={
+                    props.form()
+                        .confirmPassword
+                }
+                placeholder="Repeat password"
+                onInput={(v) =>
+                    props.update(
+                        "confirmPassword",
+                        v
+                    )
+                }
+            />
+
+            <label class="flex gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <input
+                    type="checkbox"
+                    checked={
+                        props.form().agree
+                    }
+                    onInput={(e) =>
+                        props.update(
+                            "agree",
+                            e.target.checked
+                        )
+                    }
+                />
+
+                <span class="text-sm text-zinc-300">
+                    I agree to Terms &
+                    Privacy Policy
+                </span>
+            </label>
+
+            <div class="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 text-sm text-cyan-200">
+                <Check
+                    size={16}
+                    class="mr-2 inline"
+                />
+                Workspace ready instantly.
+            </div>
+        </div>
+    );
+}
+
+/* =========================================
+   Input
+========================================= */
+
+function InputBox(props) {
+    const Icon = props.icon;
+
+    return (
+        <div>
+            <label class="text-sm text-zinc-400">
+                {props.label}
+            </label>
+
+            <div class="mt-2 flex items-center rounded-2xl border border-white/10 bg-white/5 px-4">
+                <Icon
+                    size={18}
+                    class="text-zinc-500"
+                />
+
+                <input
+                    type={
+                        props.type ||
+                        "text"
+                    }
+                    placeholder={
+                        props.placeholder
+                    }
+                    value={props.value}
+                    onInput={(e) =>
+                        props.onInput(
+                            e.target.value
+                        )
+                    }
+                    class="w-full bg-transparent px-3 py-4 outline-none"
+                />
             </div>
         </div>
     );

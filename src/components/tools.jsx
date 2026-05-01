@@ -1,4 +1,4 @@
-import { Cable, Eraser, MousePointer2, Move, Edit3 } from "lucide-solid";
+import { Cable, Eraser, MousePointer2, Move, Edit3, Activity } from "lucide-solid";
 import { setOption, settings } from "../store/state";
 
 function ToolButton(props) {
@@ -19,6 +19,7 @@ const ToolsPanel = () => {
         <section class="actions p-2">
             <div class="tool-grid">
                 <ToolButton value="select" icon={MousePointer2} />
+                <ToolButton value="probe" icon={Activity} />
                 <ToolButton value="wire" icon={Cable} />
                 <ToolButton value="wire-edit" icon={Edit3} />
                 <ToolButton value="pan" icon={Move} />

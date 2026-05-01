@@ -123,10 +123,8 @@ function Reveal(props) {
             ([entry]) => {
                 if (entry.isIntersecting) {
                     setShown(true);
-
-                    if (props.once !== false) {
-                        observer.disconnect();
-                    }
+                } else {
+                    setShown(false);
                 }
             },
             {
@@ -252,7 +250,8 @@ function StatCounter(props) {
             ([entry]) => {
                 if (entry.isIntersecting) {
                     animate();
-                    observer.disconnect();
+                } else {
+                    setValue(0);
                 }
             },
             { threshold: 0.5 }
@@ -797,7 +796,7 @@ export default function Home() {
                                 <div class="space-y-2 text-sm text-zinc-400">
                                     <a href="/editor" class="block transition hover:text-white">Simulator</a>
                                     <a href="/tools" class="block transition hover:text-white">Tools</a>
-                                    <a href="/blogs" class="block transition hover:text-white">Blogs</a>
+                                    <a href="/about" class="block transition hover:text-white">About Us</a>
                                 </div>
                             </div>
 
@@ -806,7 +805,8 @@ export default function Home() {
                                 <div class="space-y-2 text-sm text-zinc-400">
                                     <a href="/login" class="block transition hover:text-white">Login</a>
                                     <a href="/signup" class="block transition hover:text-white">Signup</a>
-                                    <a href="/account" class="block transition hover:text-white">Dashboard</a>
+                                    <a href="/profile" class="block transition hover:text-white">Profile</a>
+                                    <a href="/terms" class="block transition hover:text-white">Legal</a>
                                 </div>
                             </div>
 

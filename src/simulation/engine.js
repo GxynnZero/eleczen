@@ -69,10 +69,14 @@ export function portPoint(component, portId) {
   const angle = ((component.rotation || 0) * Math.PI) / 180;
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
+  
+  const scaleX = component.mirror ? -1 : 1;
+  const px = port.x * scaleX;
+  const py = port.y;
 
   return {
-    x: component.x + port.x * cos - port.y * sin,
-    y: component.y + port.x * sin + port.y * cos,
+    x: component.x + px * cos - py * sin,
+    y: component.y + px * sin + py * cos,
   };
 }
 
@@ -117,9 +121,33 @@ function compactPoints(points) {
   });
 }
 
-export function routeWire(start, end, components = [], terminals = {}) {
-  const sourceId = terminals.from?.componentId;
-  const targetId = terminals.to?.componentId;
+export function routeWire(start, end, components = [], options = {}) {
+  const sourceId = options.from?.componentId;
+  const targetId = options.to?.componentId;
+  const anchors = options.anchors || [];
+  
+  if (!anchors.length) {
+    return routeSegment(start, end, sourceId, targetId, components);
+  }
+
+  const path = [];
+  let currentStart = start;
+  
+  for (const anchor of anchors) {
+    const segment = routeSegment(currentStart, anchor, sourceId, targetId, components);
+    // Remove the last point so we don't duplicate it with the start of the next segment
+    path.push(...(segment.length > 0 ? segment.slice(0, -1) : []));
+    currentStart = anchor;
+  }
+  
+  const finalSegment = routeSegment(currentStart, end, sourceId, targetId, components);
+  path.push(...finalSegment);
+  
+  // Compact overall path
+  return compactPoints(path);
+}
+
+function routeSegment(start, end, sourceId, targetId, components) {
   const obstacles = components
     .filter((component) => component.id !== sourceId && component.id !== targetId)
     .map((component) => componentBounds(component, 22));
@@ -350,7 +378,18 @@ export function buildNetlist(components, wires, analysis = 'dc') {
         ? '.tran 1u 10m'
         : '.op';
 
-  return ['* ElecZen netlist', ...lines, '.model DLED D(Is=1e-20 N=2)', analysisDirective, '.end'].join('\n');
+  const text = ['* ElecZen netlist', ...lines, '.model DLED D(Is=1e-20 N=2)', analysisDirective, '.end'].join('\n');
+
+  const nodeMap = new Map();
+  for (const component of components) {
+    const ports = PARTS[component.type]?.ports || [];
+    for (const port of ports) {
+      const key = termKey({ componentId: component.id, portId: port.id });
+      nodeMap.set(key, nodeName(component.id, port.id));
+    }
+  }
+
+  return { text, nodeMap };
 }
 
 export function simulateCircuit(components, wires, analysis = 'dc') {
@@ -445,12 +484,15 @@ export function simulateCircuit(components, wires, analysis = 'dc') {
     ? `Circuit running at ${(totals.current * 1000).toFixed(1)} mA.`
     : messages[0] || 'No complete battery-resistor-LED loop.';
 
+  const netlistInfo = buildNetlist(components, wires, analysis);
+
   return {
     ok,
     message,
     states,
     stats: totals,
-    netlist: buildNetlist(components, wires, analysis),
+    netlist: netlistInfo.text,
+    nodeMap: netlistInfo.nodeMap,
     graph: describeGraph(graph),
   };
 }

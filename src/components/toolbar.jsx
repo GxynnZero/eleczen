@@ -19,8 +19,11 @@ import {
     simulationRunning,
     undo,
     zoomBy,
+    mirrorSelected,
+    rotateSelected,
+    selectedComponent,
 } from '../store/state'
-import { BatteryCharging, Lightbulb, Maximize2, Play, Redo2, Undo2, WavesHorizontal, Zap, ZoomIn, ZoomOut } from "lucide-solid";
+import { BatteryCharging, Lightbulb, Maximize2, Play, Redo2, Undo2, WavesHorizontal, Zap, ZoomIn, ZoomOut, FlipHorizontal, RotateCw } from "lucide-solid";
 
 const ToolBar = () => {
     let importInput;
@@ -304,6 +307,28 @@ const ToolBar = () => {
                     >
                         <Redo2 size={16} />
                     </button>
+
+                    <div class="mx-1 h-6 w-px bg-white/10" />
+
+                    <button
+                        class={iconBtn}
+                        onClick={mirrorSelected}
+                        disabled={!selectedComponent()}
+                        title="Flip Horizontal (Mirror)"
+                    >
+                        <FlipHorizontal size={16} />
+                    </button>
+
+                    <button
+                        class={iconBtn}
+                        onClick={rotateSelected}
+                        disabled={!selectedComponent()}
+                        title="Rotate 90° (R)"
+                    >
+                        <RotateCw size={16} />
+                    </button>
+
+                    <div class="mx-1 h-6 w-px bg-white/10" />
 
                     <button
                         class={iconBtn}
