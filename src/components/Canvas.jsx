@@ -1,4 +1,4 @@
-import { For, createSignal } from 'solid-js';
+import { For, Show, createSignal } from 'solid-js';
 import {
   PARTS,
   beginWireEdit,
@@ -247,7 +247,7 @@ export default function Canvas() {
     if (settings().tool === 'delete' || settings().tool === 'wire-edit') return;
     event.stopPropagation();
     const point = portPoint(component, port.id);
-    
+
     if (settings().tool === 'probe') {
       setProbeDraft({ from: { componentId: component.id, portId: port.id }, start: point, point, active: false });
     } else {
@@ -271,16 +271,16 @@ export default function Canvas() {
       if (pDraft.active) {
         const target = terminalNear(pointFromEvent(event), pDraft.from);
         if (target) {
-            const n1 = simulation()?.nodeMap?.get(`${pDraft.from.componentId}_${pDraft.from.portId}`);
-            const n2 = simulation()?.nodeMap?.get(`${target.componentId}_${target.portId}`);
-            if (n1 && n2) {
-                toggleProbeVariable(`v(${n1}, ${n2})`);
-            }
+          const n1 = simulation()?.nodeMap?.get(`${pDraft.from.componentId}_${pDraft.from.portId}`);
+          const n2 = simulation()?.nodeMap?.get(`${target.componentId}_${target.portId}`);
+          if (n1 && n2) {
+            toggleProbeVariable(`v(${n1}, ${n2})`);
+          }
         }
       } else {
         const n1 = simulation()?.nodeMap?.get(`${pDraft.from.componentId}_${pDraft.from.portId}`);
         if (n1) {
-            toggleProbeVariable(`v(${n1})`);
+          toggleProbeVariable(`v(${n1})`);
         }
       }
       suppressClick = true;
@@ -321,8 +321,32 @@ export default function Canvas() {
         class={`board ${settings().tool === 'probe' ? 'probe-cursor' : ''}`}
         onWheel={(event) => {
           event.preventDefault();
-          const direction = event.deltaY > 0 ? -0.1 : 0.1;
-          setZoom(viewport().zoom + direction);
+
+          const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
+
+          const rect = svg.getBoundingClientRect();
+
+          // Mouse position in screen space
+          const mouseX = event.clientX - rect.left;
+          const mouseY = event.clientY - rect.top;
+
+          const view = viewport();
+
+          // Convert mouse → world coords BEFORE zoom
+          const worldX = (mouseX / rect.width) * VIEWBOX.width;
+          const worldY = (mouseY / rect.height) * VIEWBOX.height;
+
+          const wx = (worldX - view.x) / view.zoom;
+          const wy = (worldY - view.y) / view.zoom;
+
+          const newZoom = view.zoom * zoomFactor;
+
+          // Adjust position so zoom centers at cursor
+          const newX = worldX - wx * newZoom;
+          const newY = worldY - wy * newZoom;
+
+          setZoom(newZoom);
+          panViewport(newX - view.x, newY - view.y);
         }}
         onContextMenu={(event) => {
           event.preventDefault();
@@ -348,9 +372,37 @@ export default function Canvas() {
         }}
       >
         <defs>
-          <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
-            <path d="M 24 0 L 0 0 0 24" class="grid-line" />
+          {/* 🔹 MINOR GRID */}
+          <pattern
+            id="grid-minor"
+            width="24"
+            height="24"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M 24 0 L 0 0 0 24"
+              stroke="rgba(148,163,184,0.15)"
+              stroke-width="1"
+              fill="none"
+            />
           </pattern>
+
+          {/* 🔸 MAJOR GRID (5x spacing) */}
+          <pattern
+            id="grid-major"
+            width="120"
+            height="120"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M 120 0 L 0 0 0 120"
+              stroke="rgba(148,163,184,0.35)"
+              stroke-width="1.5"
+              fill="none"
+            />
+          </pattern>
+
+          {/* Glow stays same */}
           <filter id="glow">
             <feGaussianBlur stdDeviation="5" result="blur" />
             <feMerge>
@@ -360,10 +412,35 @@ export default function Canvas() {
           </filter>
         </defs>
 
+        {/* BACKGROUND */}
         <rect width="900" height="560" class="board-bg" />
-        {settings().grid && <rect width="900" height="560" fill="url(#grid)" />}
 
         <g transform={`translate(${viewport().x} ${viewport().y}) scale(${viewport().zoom})`}>
+
+          {/* ================= GRID ================= */}
+          {settings().grid && (
+            <>
+              {/* Minor grid */}
+              <rect
+                x={-5000}
+                y={-5000}
+                width={10000}
+                height={10000}
+                fill="url(#grid-minor)"
+              />
+
+              {/* Major grid */}
+              <rect
+                x={-5000}
+                y={-5000}
+                width={10000}
+                height={10000}
+                fill="url(#grid-major)"
+              />
+            </>
+          )}
+
+          {/* ================= WIRES ================= */}
           <For each={wires()}>
             {(wire) => {
               const editing = wireEditTarget()?.wireId === wire.id;
@@ -374,88 +451,122 @@ export default function Canvas() {
                     class={`wire ${isSelected('wire', wire.id) ? 'selected' : ''} ${editing ? 'editing' : ''}`}
                     onClick={(event) => {
                       event.stopPropagation();
+
                       if (settings().tool === 'delete') {
                         deleteItem('wire', wire.id);
                         return;
                       }
+
                       if (settings().tool === 'probe') {
                         const n1 = simulation()?.nodeMap?.get(`${wire.from.componentId}_${wire.from.portId}`);
                         if (n1) toggleProbeVariable(`v(${n1})`);
                         return;
                       }
+
                       if (settings().tool === 'wire-edit') {
                         selectWire(wire.id);
                         const clickPoint = pointFromEvent(event);
                         const fromPoint = terminalPoint(wire.from);
                         const toPoint = terminalPoint(wire.to);
-                        const endpoint = Math.hypot(clickPoint.x - fromPoint.x, clickPoint.y - fromPoint.y) <= Math.hypot(clickPoint.x - toPoint.x, clickPoint.y - toPoint.y) ? 'from' : 'to';
+
+                        const endpoint =
+                          Math.hypot(clickPoint.x - fromPoint.x, clickPoint.y - fromPoint.y) <=
+                            Math.hypot(clickPoint.x - toPoint.x, clickPoint.y - toPoint.y)
+                            ? 'from'
+                            : 'to';
+
                         beginWireEdit(wire.id, endpoint);
                         return;
                       }
+
                       selectWire(wire.id);
                     }}
                     onContextMenu={(event) => {
-                       // if not in draft, right click on existing wire can add an anchor segment point
-                       event.preventDefault();
-                       event.stopPropagation();
-                       const clickPoint = pointFromEvent(event);
-                       const anchors = [...(wire.anchors || []), clickPoint];
-                       // We need a helper to addAnchor, or just update the wire via remember/setWires.
-                       // For simplicity, we can just use updateAnchor with a new index
-                       updateAnchor(wire.id, anchors.length - 1, clickPoint.x, clickPoint.y);
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      const clickPoint = pointFromEvent(event);
+                      updateAnchor(wire.id, (wire.anchors || []).length, clickPoint.x, clickPoint.y);
                     }}
                   />
-                  {isSelected('wire', wire.id) && (wire.anchors || []).map((anchor, i) => (
-                    <circle
-                      cx={anchor.x}
-                      cy={anchor.y}
-                      r="6"
-                      class="wire-anchor"
-                      fill="#3b82f6"
-                      stroke="#000"
-                      stroke-width="2"
-                      onPointerDown={(event) => startAnchorDrag(event, wire.id, i, anchor)}
-                    />
-                  ))}
+
+                  {/* Anchors */}
+                  {isSelected('wire', wire.id) &&
+                    (wire.anchors || []).map((anchor, i) => (
+                      <circle
+                        cx={anchor.x}
+                        cy={anchor.y}
+                        r="6"
+                        class="wire-anchor"
+                        onPointerDown={(event) =>
+                          startAnchorDrag(event, wire.id, i, anchor)
+                        }
+                      />
+                    ))}
                 </g>
               );
             }}
           </For>
 
-          {wireDraft()?.active && <path d={draftPath()} class="wire draft" />}
+          {/* Draft wire */}
+          {wireDraft()?.active && (
+            <path d={draftPath()} class="wire draft" />
+          )}
 
+          {/* Probe draft */}
           <Show when={probeDraft()}>
-              {(draft) => (
-                  <line 
-                      x1={draft().start.x} y1={draft().start.y} 
-                      x2={draft().point.x} y2={draft().point.y} 
-                      stroke="#eab308" stroke-width="2" stroke-dasharray="4" fill="none"
-                  />
-              )}
+            {(draft) => (
+              <line
+                x1={draft().start.x}
+                y1={draft().start.y}
+                x2={draft().point.x}
+                y2={draft().point.y}
+                class="probe-line"
+              />
+            )}
           </Show>
 
+          {/* ================= COMPONENTS ================= */}
           <For each={components()}>
             {(component) => {
               const spec = PARTS[component.type];
 
               return (
-                  <g
-                    class={`part ${isSelected('component', component.id) ? 'selected' : ''} ${component.state?.active ? 'active' : ''}`}
-                    transform={`translate(${component.x} ${component.y}) rotate(${component.rotation || 0}) scale(${component.mirror ? -1 : 1}, 1)`}
-                    onPointerDown={(event) => startDrag(event, component)}
-                    onPointerEnter={() => setHoveredComponent(component.id)}
-                    onPointerLeave={() => setHoveredComponent(null)}
-                  >
-                    <rect x="-78" y="-50" width="156" height="100" rx="8" class="hitbox" />
-                    <PartBody component={component} />
-                    {settings().showLabels && <text x="0" y="45" class="part-label" transform={component.mirror ? "scale(-1, 1)" : ""}>{spec.label}</text>}
-                    
-                    <Show when={settings().tool === 'probe' && hoveredComponent() === component.id}>
-                      <text x="0" y="-45" class="probe-tooltip" fill="#eab308" font-size="12" font-family="monospace" text-anchor="middle" pointer-events="none" transform={component.mirror ? "scale(-1, 1)" : ""}>
-                        {formatValue(getSimValue(`i(${getDeviceName(component)})`), 'A')}
-                      </text>
-                    </Show>
+                <g
+                  class={`part ${isSelected('component', component.id) ? 'selected' : ''} ${component.state?.active ? 'active' : ''}`}
+                  transform={`translate(${component.x} ${component.y}) rotate(${component.rotation || 0}) scale(${component.mirror ? -1 : 1}, 1)`}
+                  onPointerDown={(event) => startDrag(event, component)}
+                  onPointerEnter={() => setHoveredComponent(component.id)}
+                  onPointerLeave={() => setHoveredComponent(null)}
+                >
+                  <rect x="-78" y="-50" width="156" height="100" rx="8" class="hitbox" />
 
+                  <PartBody component={component} />
+
+                  {settings().showLabels && (
+                    <text
+                      x="0"
+                      y="45"
+                      class="part-label"
+                      transform={component.mirror ? "scale(-1, 1)" : ""}
+                    >
+                      {spec.label}
+                    </text>
+                  )}
+
+                  {/* Probe tooltip */}
+                  <Show when={settings().tool === 'probe' && hoveredComponent() === component.id}>
+                    <text
+                      x="0"
+                      y="-45"
+                      class="probe-tooltip"
+                      transform={component.mirror ? "scale(-1, 1)" : ""}
+                    >
+                      {formatValue(getSimValue(`i(${getDeviceName(component)})`), 'A')}
+                    </text>
+                  </Show>
+
+                  {/* Ports */}
                   <For each={spec.ports}>
                     {(port) => (
                       <g
@@ -466,10 +577,12 @@ export default function Canvas() {
                           event.stopPropagation();
                           if (suppressClick) return;
                           if (settings().tool === 'delete') return;
+
                           if (settings().tool === 'wire-edit' && wireEditTarget()) {
                             finishWireEdit(component.id, port.id);
                             return;
                           }
+
                           connectPort(component.id, port.id);
                         }}
                       >
@@ -482,6 +595,7 @@ export default function Canvas() {
               );
             }}
           </For>
+
         </g>
       </svg>
     </div>

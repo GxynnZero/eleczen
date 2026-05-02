@@ -365,10 +365,21 @@ input:focus-visible {
   fill: #0b0f12;
 }
 
-.grid-line {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.075);
+/* 🌌 Canvas background */
+.board-bg {
+  fill: #0a0d14;
+}
+
+/* 🔹 Minor grid lines */
+.grid-minor path {
+  stroke: rgba(148, 163, 184, 0.15);
   stroke-width: 1;
+}
+
+/* 🔸 Major grid lines */
+.grid-major path {
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1.4;
 }
 
 .wire {
