@@ -1,5 +1,5 @@
 import { createEffect, onCleanup, onMount } from 'solid-js';
-import { components, portPoint, wires } from '../store/state.js';
+import { components, portPoint, wires } from '../utils/simulation/index.js';
 
 const WORLD = { width: 900, height: 560 };
 

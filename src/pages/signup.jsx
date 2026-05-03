@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 
-import { registerRequest } from "../store/auth.js";
+import { registerRequest } from "../utils/auth.js";
 
 import {
     Mail,

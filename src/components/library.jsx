@@ -9,8 +9,8 @@ import {
     Zap,
 } from "lucide-solid";
 
-import { PARTS } from "../simulation/engine";
-import { addComponent } from "../store/state";
+import { PARTS } from "../lib/simulation/engine";
+import { addComponent } from "../utils/simulation";
 import { icons } from ".";
 
 export default function Library() {
@@ -99,8 +99,8 @@ export default function Library() {
                                         return (
                                             <button
                                                 class={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition ${selected() === type
-                                                        ? "bg-blue-600 text-white"
-                                                        : "hover:bg-white/5 text-zinc-300"
+                                                    ? "bg-blue-600 text-white"
+                                                    : "hover:bg-white/5 text-zinc-300"
                                                     }`}
                                                 onClick={() => setSelected(type)}
                                             >

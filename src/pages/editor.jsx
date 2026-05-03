@@ -1,7 +1,9 @@
 import { Canvas, ComponentsPanel, ConsolePanel, PropertiesPanel, ToolBar, ToolsPanel, TopBar } from "../components";
 import { SplitPane } from "solid-split-pane";
 import { Show } from 'solid-js';
-import { settings } from '../store/state';
+import { settings } from '../utils/simulation';
+import { cm, wm, es, sm } from '../utils/simulation/store.js';
+import { CanvasProvider } from '../utils/canvas/canvasCtx.jsx';
 
 function EditorPage() {
     return (
@@ -32,7 +34,12 @@ function EditorPage() {
                             gutterClass="split-gutter split-gutter-vertical"
                         >
                             <ComponentsPanel />
-                            <Canvas />
+
+                            {/* Canvas wrapped in its context provider */}
+                            <CanvasProvider cm={cm} wm={wm} es={es} sm={sm}>
+                                <Canvas />
+                            </CanvasProvider>
+
                             <PropertiesPanel />
                         </SplitPane>
                     </div>

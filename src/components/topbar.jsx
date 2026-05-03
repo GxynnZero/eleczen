@@ -1,6 +1,6 @@
 import { createSignal, Show, onCleanup, onMount } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
-import { user, loadSession, logoutRequest } from "../store/auth.js";
+import { user, loadSession, logoutRequest } from "../utils/auth.js";
 import {
     settings,
     setOption,
@@ -9,7 +9,7 @@ import {
     saveProject,
     clearAll,
     loadProject,
-} from "../store/state.js";
+} from "../utils/simulation/index.js";
 
 function TopBar() {
     let importInput;

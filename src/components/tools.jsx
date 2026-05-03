@@ -1,5 +1,5 @@
 import { Cable, Eraser, MousePointer2, Move, Edit3, Activity } from "lucide-solid";
-import { setOption, settings } from "../store/state";
+import { setOption, settings } from "../utils/simulation";
 
 function ToolButton(props) {
     const Icon = props.icon;

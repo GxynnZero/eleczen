@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
     analysisMode,
     clearAll,
@@ -22,14 +22,20 @@ import {
     mirrorSelected,
     rotateSelected,
     selectedComponent,
-} from '../store/state'
-import { BatteryCharging, Lightbulb, Maximize2, Play, Redo2, Undo2, WavesHorizontal, Zap, ZoomIn, ZoomOut, FlipHorizontal, RotateCw } from "lucide-solid";
+    loadProject,
+} from '../utils/simulation';
+import { cloudSyncing } from '../utils/cloudStore.js';
+import CloudProjectsModal from './cloudProjects.jsx';
+import CloudLibrary from './cloudLibrary.jsx';
+import { BatteryCharging, Lightbulb, Maximize2, Play, Redo2, Undo2, WavesHorizontal, Zap, ZoomIn, ZoomOut, FlipHorizontal, RotateCw, Cloud, Globe } from "lucide-solid";
 
 const ToolBar = () => {
     let importInput;
     let menuRef;
 
     const [activeMenu, setActiveMenu] = createSignal(null); // file | edit | view | graph | settings | help
+    const [showCloud,        setShowCloud]        = createSignal(false);
+    const [showCloudLibrary, setShowCloudLibrary] = createSignal(false);
     const [settingsTab, setSettingsTab] = createSignal('view');
     const closeMenu = () => setActiveMenu(null);
     const toggleMenu = (menu, e) => {
@@ -354,6 +360,28 @@ const ToolBar = () => {
                         <Maximize2 size={16} />
                     </button>
 
+                    {/* CLOUD BUTTONS */}
+                    <div class="mx-1 h-6 w-px bg-white/10" />
+
+                    <button
+                        title="Cloud Projects"
+                        onClick={() => setShowCloud(true)}
+                        class={`${iconBtn} relative`}
+                    >
+                        <Cloud size={16} />
+                        <Show when={cloudSyncing()}>
+                            <span class="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                        </Show>
+                    </button>
+
+                    <button
+                        title="Cloud Component Library"
+                        onClick={() => setShowCloudLibrary(true)}
+                        class={iconBtn}
+                    >
+                        <Globe size={16} />
+                    </button>
+
                     <button
                         class="ml-2 h-10 px-4 flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 text-black font-semibold shadow-[0_0_25px_rgba(34,211,238,.35)] transition hover:scale-[1.03] active:scale-95 disabled:opacity-50"
                         onClick={runSimulation}
@@ -539,6 +567,14 @@ const ToolBar = () => {
                 accept=".json"
                 onChange={(e) => importProject(e.currentTarget.files?.[0])}
             />
+
+            {/* CLOUD MODALS */}
+            <Show when={showCloud()}>
+                <CloudProjectsModal onClose={() => setShowCloud(false)} />
+            </Show>
+            <Show when={showCloudLibrary()}>
+                <CloudLibrary onClose={() => setShowCloudLibrary(false)} />
+            </Show>
         </div>
     );
 };

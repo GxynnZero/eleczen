@@ -16,7 +16,7 @@ import {
     logs,
     settings,
     toggleConsoleMaximized,
-} from '../store/state.js';
+} from '../utils/simulation/index.js';
 
 /* ---------------- helpers ---------------- */
 
@@ -37,7 +37,7 @@ function buildPlotData(raw, selected) {
                 const [, node1, node2] = match;
                 const n1 = raw.data.find((item) => item.name.toLowerCase() === `v(${node1.toLowerCase()})`);
                 const n2 = raw.data.find((item) => item.name.toLowerCase() === `v(${node2.toLowerCase()})`);
-                
+
                 rows.push(x.map((_, i) => {
                     const v1 = n1 ? Number(n1.values[i]) : 0;
                     const v2 = n2 ? Number(n2.values[i]) : 0;

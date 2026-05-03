@@ -1,4 +1,4 @@
-import ConsolePanel from "../components/ConsolePanel";
+import ConsolePanel from "../components/consolePanel";
 
 export default function Debug() {
     return (

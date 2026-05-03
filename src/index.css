@@ -74,19 +74,6 @@ input:focus-visible {
   height: 100%;
 }
 
-.pane {
-  min-width: 0;
-  height: 100%;
-}
-
-.single-page {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 12px;
-  height: 100vh;
-  padding: 12px;
-}
-
 .split-gutter {
   flex-shrink: 0;
   border-radius: 8px;
@@ -103,8 +90,6 @@ input:focus-visible {
   cursor: col-resize;
 }
 
-.panel,
-.toolbar,
 .canvas-shell {
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
@@ -123,8 +108,6 @@ input:focus-visible {
   overflow: auto;
 }
 
-.brand,
-.toolbar,
 .actions,
 .field,
 .metric,
@@ -134,53 +117,6 @@ input:focus-visible {
   align-items: center;
 }
 
-.brand {
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.route-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin-bottom: 14px;
-  padding: 4px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.route-tabs a {
-  border-radius: 6px;
-  color: #aeb9c7;
-  font-size: 0.78rem;
-  padding: 8px 6px;
-  text-align: center;
-  text-decoration: none;
-}
-
-.route-tabs a[aria-current="page"] {
-  background: rgba(100, 214, 202, 0.16);
-  color: #e7fffb;
-}
-
-.logo {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #16a085, #f2a23a);
-  color: #08100f;
-  font-weight: 900;
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.brand span,
-.toolbar span,
 .field span,
 .metric span {
   color: #97a3b6;
@@ -208,8 +144,7 @@ input:focus-visible {
 .component-list,
 .side,
 .inspector,
-.options,
-.log-list {
+.options {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -225,11 +160,6 @@ input:focus-visible {
   background: rgba(255, 255, 255, 0.045);
   color: #eef2f7;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.part-button {
-  justify-content: space-between;
-  padding: 9px 10px;
 }
 
 .component-row {
@@ -258,14 +188,6 @@ input:focus-visible {
   border-color: rgba(100, 214, 202, 0.42);
   background: rgba(100, 214, 202, 0.08);
   transform: translateY(-1px);
-}
-
-.workspace {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100%;
-  min-width: 0;
-  gap: 12px;
 }
 
 .menu-item {
@@ -311,25 +233,6 @@ input:focus-visible {
 .menu-item.text-red-400:hover {
   background: rgba(248, 113, 113, 0.12);
   color: rgb(252 165 165);
-}
-
-.toolbar {
-  justify-content: space-between;
-  padding: 10px;
-}
-
-.toolbar strong {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 0.96rem;
-}
-
-.toolbar strong.ok {
-  color: #7ee787;
-}
-
-.toolbar strong.idle {
-  color: #f6c85f;
 }
 
 .actions {
@@ -500,40 +403,11 @@ input:focus-visible {
   text-align: right;
 }
 
-.property-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
 .empty-state {
   display: grid;
   min-height: 120px;
   place-items: center;
   color: #97a3b6;
-}
-
-.netlist {
-  max-height: 180px;
-  overflow: auto;
-  margin: 10px 0 0;
-  padding: 10px;
-  border-radius: 8px;
-  background: #080b0e;
-  color: #aeb9c7;
-  font-size: 0.75rem;
-  line-height: 1.45;
-}
-
-.hidden-input {
-  display: none;
-}
-
-.document-panel {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .pixi-minimap {
@@ -547,19 +421,6 @@ input:focus-visible {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-.big-output {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  margin: 0;
-  padding: 14px;
-  border-radius: 8px;
-  background: #080b0e;
-  color: #d9e1e8;
-  font-size: 0.82rem;
-  line-height: 1.5;
 }
 
 .panel-title.with-icon {
@@ -618,32 +479,6 @@ input:focus-visible {
   transform: translateX(15px);
 }
 
-.segmented {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.segmented button {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #aeb9c7;
-}
-
-.segmented button.active {
-  background: rgba(100, 214, 202, 0.16);
-  color: #e7fffb;
-}
-
 .tool-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -669,144 +504,6 @@ input:focus-visible {
   color: #e7fffb;
 }
 
-.graph-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.graph-view {
-  min-height: 140px;
-  overflow: hidden;
-  margin: 0;
-  padding: 14px;
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.92);
-  color: #cbd5e1;
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-
-.console-panel {
-  display: grid;
-  grid-template-columns: minmax(340px, 1.4fr) minmax(260px, 0.8fr);
-  gap: 16px;
-  padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(2, 8, 16, 0.93);
-}
-
-.console-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.console-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.console-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.analysis-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.analysis-tabs button,
-.run-panel {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: #d9e1e8;
-  padding: 10px 14px;
-  font-size: 0.8rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
-.analysis-tabs button.active,
-.run-panel:hover {
-  background: rgba(34, 211, 238, 0.15);
-  color: #e7fffb;
-}
-
-.probe-list {
-  display: grid;
-  gap: 8px;
-  max-height: 170px;
-  overflow: auto;
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.probe-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.8rem;
-  color: #cbd5e1;
-}
-
-.probe-item input {
-  accent-color: #22d3ee;
-}
-
-.sparkline {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 60px;
-  margin-top: 12px;
-}
-
-.sparkline-bar {
-  width: 6px;
-  background: linear-gradient(180deg, #22d3ee, #0ea5e9);
-  border-radius: 999px;
-}
-
-.engine-output {
-  max-height: 220px;
-  color: #9fb3c8;
-  overflow: auto;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.console-panel .panel-title.compact {
-  margin-bottom: 8px;
-}
-
-.log {
-  border-left: 3px solid #64748b;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.045);
-  color: #d9e1e8;
-  font-size: 0.78rem;
-  line-height: 1.35;
-  padding: 8px 9px;
-}
-
-.log.success {
-  border-color: #7ee787;
-}
-
-.log.warn {
-  border-color: #f6c85f;
-}
-
 @media (max-width: 1050px) {
   body {
     overflow: auto;
@@ -822,19 +519,8 @@ input:focus-visible {
     height: auto;
   }
 
-  .app .pane {
-    width: 100% !important;
-    height: auto;
-  }
-
   .app .split-gutter {
     display: none;
-  }
-
-  .single-page {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: 100vh;
   }
 
   .canvas-shell {
@@ -847,15 +533,12 @@ input:focus-visible {
     max-height: none;
   }
 
-  .toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .actions {
     justify-content: flex-start;
   }
 }
+
+
 
 /* Probe mode and tooltips */
 .board.probe-cursor {
@@ -866,25 +549,6 @@ input:focus-visible {
   pointer-events: none;
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-}
-
-/* uPlot Legend & Tooltip Styling */
-.u-legend {
-  color: #94a3b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-.u-legend--interactive {
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-.u-legend--interactive:hover {
-  color: #cbd5e1;
-}
-.u-legend--interactive.u-legend--active {
-  color: #ffffff;
-}
-.u-legend--series:hover {
-  background: rgba(148, 163, 184, 0.12);
 }
 
 .u-over {
@@ -903,71 +567,4 @@ input:focus-visible {
   color: #cbd5e1 !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   font-size: 0.8rem !important;
-}
-
-/* uPlot Grid Styling */
-.u-grid>path {
-  stroke: rgba(255, 255, 255, 0.08) !important;
-  stroke-width: 1px !important;
-}
-.u-hlines>path {
-  stroke: rgba(34, 211, 238, 0.4) !important;
-  stroke-width: 1px !important;
-  stroke-dasharray: 4 4 !important;
-}
-
-/* uPlot Axes */
-.u-axis path,
-.u-axis line {
-  stroke: rgba(148, 163, 184, 0.5) !important;
-}
-.u-axis text {
-  fill: #94a3b8 !important;
-}
-
-/* uPlot Series Colors */
-.u-series:nth-child(1) path {
-  stroke: #38bdf8 !important;
-  stroke-width: 2px !important;
-}
-.u-series:nth-child(1) circle {
-  fill: #38bdf8 !important;
-}
-
-.u-series:nth-child(2) path {
-  stroke: #f6c85f !important;
-  stroke-width: 2px !important;
-}
-.u-series:nth-child(2) circle {
-  fill: #f6c85f !important;
-}
-
-.u-series:nth-child(3) path {
-  stroke: #e5e7eb !important;
-  stroke-width: 2px !important;
-}
-.u-series:nth-child(3) circle {
-  fill: #e5e7eb !important;
-}
-
-.u-series:nth-child(4) path {
-  stroke: #64748b !important;
-  stroke-width: 2px !important;
-}
-.u-series:nth-child(4) circle {
-  fill: #64748b !important;
-}
-
-/* Hide inactive/unselected series in legend */
-.u-legend--series:not(.u-legend--active) path {
-  opacity: 0.25 !important;
-}
-.u-legend--series:not(.u-legend--active) circle {
-  opacity: 0.4 !important;
-}
-
-/* Highlight active series in legend */
-.u-legend--active.u-legend--series path {
-  stroke-width: 2.5px !important;
-  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.5));
 }

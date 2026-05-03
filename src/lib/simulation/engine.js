@@ -52,6 +52,89 @@ export const PARTS = {
       { id: 'b', label: 'B', x: 54, y: 0 },
     ],
   },
+  // ── New components ────────────────────────────────────────────
+  inductor: {
+    label: 'Inductor',
+    unit: 'mH',
+    valueKey: 'inductance',
+    defaultValue: 10,
+    ports: [
+      { id: 'a', label: 'A', x: -60, y: 0 },
+      { id: 'b', label: 'B', x: 60, y: 0 },
+    ],
+  },
+  diode: {
+    label: 'Diode',
+    unit: 'Vf',
+    valueKey: 'forwardVoltage',
+    defaultValue: 0.7,
+    ports: [
+      { id: 'anode',   label: 'A', x: -54, y: 0 },
+      { id: 'cathode', label: 'K', x: 54,  y: 0 },
+    ],
+  },
+  zener: {
+    label: 'Zener',
+    unit: 'Vz',
+    valueKey: 'zenerVoltage',
+    defaultValue: 5.1,
+    ports: [
+      { id: 'anode',   label: 'A', x: -54, y: 0 },
+      { id: 'cathode', label: 'K', x: 54,  y: 0 },
+    ],
+  },
+  npn: {
+    label: 'NPN BJT',
+    unit: 'hFE',
+    valueKey: 'gain',
+    defaultValue: 100,
+    ports: [
+      { id: 'base',      label: 'B', x: -54, y: 0  },
+      { id: 'collector', label: 'C', x: 0,   y: -44 },
+      { id: 'emitter',   label: 'E', x: 0,   y:  44 },
+    ],
+  },
+  pnp: {
+    label: 'PNP BJT',
+    unit: 'hFE',
+    valueKey: 'gain',
+    defaultValue: 100,
+    ports: [
+      { id: 'base',      label: 'B', x: -54, y: 0  },
+      { id: 'collector', label: 'C', x: 0,   y: -44 },
+      { id: 'emitter',   label: 'E', x: 0,   y:  44 },
+    ],
+  },
+  mosfet_n: {
+    label: 'N-MOSFET',
+    unit: 'Vth',
+    valueKey: 'threshold',
+    defaultValue: 2,
+    ports: [
+      { id: 'gate',   label: 'G', x: -54, y: 0  },
+      { id: 'drain',  label: 'D', x: 0,   y: -44 },
+      { id: 'source', label: 'S', x: 0,   y:  44 },
+    ],
+  },
+  voltmeter: {
+    label: 'Voltmeter',
+    unit: 'V',
+    valueKey: 'range',
+    defaultValue: 50,
+    ports: [
+      { id: 'pos', label: '+', x: -48, y: 0 },
+      { id: 'neg', label: '-', x: 48,  y: 0 },
+    ],
+  },
+  ground: {
+    label: 'Ground',
+    unit: '',
+    valueKey: 'resistance',
+    defaultValue: 0,
+    ports: [
+      { id: 'gnd', label: 'GND', x: 0, y: -36 },
+    ],
+  },
 };
 
 export const termKey = ({ componentId, portId }) => `${componentId}:${portId}`;

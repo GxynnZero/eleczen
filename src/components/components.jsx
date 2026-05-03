@@ -1,8 +1,8 @@
 import { Zap } from "lucide-solid";
 import { icons } from ".";
-import { components, selectComponent } from "../store/state";
+import { components, selectComponent } from "../utils/simulation";
 import Library from "./library";
-import MiniMap from "./MiniMap";
+import MiniMap from "./miniMap";
 
 const ComponentsPanel = () => {
     return (
