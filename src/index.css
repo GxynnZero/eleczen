@@ -314,11 +314,13 @@ input:focus-visible {
 }
 
 .hitbox {
-  fill: rgba(255, 255, 255, 0.03);
-  stroke: rgba(255, 255, 255, 0.1);
+  fill: transparent;
+  stroke: transparent;
 }
 
 .part.selected .hitbox {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.1);
   stroke: #f6c85f;
   stroke-width: 2;
 }
