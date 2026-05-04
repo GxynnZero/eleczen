@@ -65,12 +65,20 @@ export default function Library() {
                                     Component Library
                                 </h2>
 
-                                <button
-                                    class="p-2 rounded-lg hover:bg-white/10 transition"
-                                    onClick={() => setOpen(false)}
-                                >
-                                    <X size={18} />
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <a 
+                                        href="/publish"
+                                        class="text-xs text-blue-400 hover:text-blue-300 font-medium px-2 py-1 rounded-md hover:bg-blue-500/10 transition"
+                                    >
+                                        Publish
+                                    </a>
+                                    <button
+                                        class="p-2 rounded-lg hover:bg-white/10 transition"
+                                        onClick={() => setOpen(false)}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Search */}

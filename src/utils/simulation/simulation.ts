@@ -10,6 +10,7 @@ class SimulationManager {
   wm: WireManager;
   settings: Accessor<Settings>;
   pushLog: ((msg: string, level?: string) => void) | undefined;
+  setOption: ((name: string, value: any) => void) | undefined;
   ready: (msg: string) => any;
   simulationRunning: Accessor<boolean>;
   setSimulationRunning: Setter<boolean>;
@@ -28,6 +29,7 @@ class SimulationManager {
     // 🔹 injected deps (IMPORTANT)
     this.settings = deps.settings;
     this.pushLog = deps.pushLog;
+    this.setOption = deps.setOption;
     this.ready = deps.ready;
 
     const [simulationRunning, setSimulationRunning] = createSignal(false);
@@ -83,20 +85,26 @@ class SimulationManager {
   }
 
   stopSimulation() {
-    if (!this.simulationRunning()) return;
-
     this.currentSimulationAbort?.abort();
     this.currentSimulationAbort = null;
 
     this.setSimulationRunning(false);
 
+    // Upgrade Stop: Reset all component states to blank
+    this.cm.setComponents((items) =>
+      items.map((item) => ({
+        ...item,
+        state: this.cm.blankState(),
+      }))
+    );
+
     this.setSimulation((current) => ({
       ...current,
       engine: { ...current.engine, status: 'stopped' },
-      message: 'Simulation stopped by user.',
+      message: 'Simulation stopped.',
     }));
 
-    this.pushLog?.('Simulation stopped by user.', 'warn');
+    this.pushLog?.('Simulation stopped.', 'warn');
   }
 
   async applySimulation(signal = { aborted: false }) {
@@ -125,6 +133,8 @@ class SimulationManager {
       this.setSimulation(res);
       return res;
     }
+
+    if (!local.ok) return local;
 
     try {
       const { runEeCircuitSimulation } = await import('../../lib/simulation/eecircuitEngine');
@@ -170,30 +180,51 @@ class SimulationManager {
   }
 
   applyLocalSimulation(extra = {}) {
-    const result = simulateCircuit(
-      this.cm.components(),
-      this.wm.wires(),
-      this.analysisMode()
-    );
+    try {
+      const result = simulateCircuit(
+        this.cm.components(),
+        this.wm.wires(),
+        this.analysisMode()
+      );
 
-    const merged = {
-      ...result,
-      analysis: this.analysisMode(),
-      probes: this.probeVariables(),
-      engine: { mode: 'local', status: 'ready', raw: null },
-      ...extra,
-    };
+      const merged = {
+        ...result,
+        analysis: this.analysisMode(),
+        probes: this.probeVariables(),
+        engine: { mode: 'local', status: 'ready', raw: null },
+        ...extra,
+      };
 
-    this.cm.setComponents((items) =>
-      items.map((item) => ({
-        ...item,
-        state: result.states[item.id] || this.cm.blankState(),
-      }))
-    );
+      this.cm.setComponents((items) =>
+        items.map((item) => ({
+          ...item,
+          state: result.states[item.id] || this.cm.blankState(),
+        }))
+      );
 
-    this.setSimulation(merged);
+      this.setSimulation(merged);
+      return merged;
 
-    return merged;
+    } catch (err: any) {
+      this.stopSimulation();
+      this.pushLog?.(err.message, 'error');
+      
+      // Auto-show console on error
+      this.setOption?.('console', true);
+      
+      const errorResult = {
+        ok: false,
+        message: err.message,
+        states: {},
+        netlist: '',
+        nodeMap: new Map(),
+        graph: { nodes: [], edges: [], adjacency: [] },
+        engine: { mode: 'local', status: 'failed', raw: err.message },
+        ...extra
+      };
+      this.setSimulation(errorResult);
+      return errorResult;
+    }
   }
 
   toggleProbeVariable(name) {

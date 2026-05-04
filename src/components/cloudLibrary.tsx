@@ -4,9 +4,9 @@
 import { createSignal, createEffect, For, Show, onMount } from 'solid-js';
 import {
   Search, X, CloudDownload, Star, Package, Upload,
-  ChevronRight, Loader, AlertCircle, Tag, Globe
+  ChevronRight, Loader, AlertCircle, Tag, Globe, CheckCircle2
 } from 'lucide-solid';
-import { fetchCloudComponents, incrementDownloads } from '../lib/api/cloudComponents';
+import { fetchCloudComponents, incrementDownloads } from '../lib/api/components';
 import { addComponent, pushLog } from '../utils/simulation/index';
 
 const TAG_OPTIONS = ['analog', 'digital', 'rf', 'power', 'sensor', 'opamp', 'mcu'];
@@ -49,12 +49,25 @@ function ComponentCard(props) {
       <div class="p-3 flex flex-col gap-2 flex-1">
         <div class="flex items-start justify-between gap-2">
           <div>
-            <div class="font-semibold text-white text-sm leading-tight">{props.item.name}</div>
+            <div class="font-semibold text-white text-sm leading-tight flex items-center gap-1.5">
+              {props.item.name}
+              <Show when={props.item.verified}>
+                <CheckCircle2 size={12} class="text-blue-400 fill-blue-400/10" />
+              </Show>
+            </div>
             <div class="text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wider">{props.item.type}</div>
           </div>
-          <div class="flex items-center gap-1 text-[10px] text-zinc-500 shrink-0">
-            <CloudDownload size={10} />
-            {props.item.downloads ?? 0}
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <div class="flex items-center gap-1 text-[10px] text-zinc-500">
+              <CloudDownload size={10} />
+              {props.item.downloads ?? 0}
+            </div>
+            <Show when={props.item.rating}>
+              <div class="flex items-center gap-0.5 text-[10px] text-amber-400">
+                <Star size={10} class="fill-current" />
+                {props.item.rating.toFixed(1)}
+              </div>
+            </Show>
           </div>
         </div>
 

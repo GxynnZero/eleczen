@@ -10,7 +10,6 @@ function EditorPage() {
     return (
         <div class="flex h-screen w-screen flex-col overflow-hidden">
             <header class="flex flex-col border-b border-white/10 bg-[#05070b]/90 backdrop-blur-2xl">
-                <TopBar />
                 <ToolBar />
             </header>
 

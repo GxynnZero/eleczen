@@ -515,8 +515,7 @@ export function simulateCircuit(components, wires, analysis = 'dc') {
     );
 
     if (paths.some((path) => path.every((edge) => edge.kind === 'wire'))) {
-      messages.push(`${battery.id} is shorted.`);
-      continue;
+      throw new Error(`Simulation Error: Short circuit detected at battery ${battery.id}.`);
     }
 
     const candidates = paths

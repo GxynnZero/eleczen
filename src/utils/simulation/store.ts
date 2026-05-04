@@ -59,8 +59,8 @@ export const es = new EditorSystem(cm, wm, {
 });
 
 export const sm = new SimulationManager(cm, wm, {
-  settings:  () => es.settings(),
   pushLog:   (t, l) => es.pushLog(t, l),
+  setOption: (k, v) => es.setOption(k, v),
   ready,
 });
 

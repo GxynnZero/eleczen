@@ -66,7 +66,7 @@ function TopBar() {
                 {/* BRAND */}
                 <a href="/" class="flex items-center gap-3 group">
                     <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-emerald-400 flex items-center justify-center font-black text-black shadow-[0_0_30px_rgba(34,211,238,.35)] group-hover:scale-105 transition">
-                        <img src="./dist/assets/eleczen_512.png" alt="ElecZen" />
+                        <img src="https://buqzumrtrksoymzaddvq.supabase.co/storage/v1/object/sign/assets/eleczen_512.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9jYmIzOTViOC0wZTA2LTQ3YTctOTkyMi0xMDExY2U0MThlZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvZWxlY3plbl81MTIucG5nIiwiaWF0IjoxNzc3NTU5NjEwLCJleHAiOjE4MDkwOTU2MTB9.sq0x0spanhUvY8AO4EVkBUEwNhOLVUQG8N6PUTvIAFY" alt="ElecZen" />
                     </div>
 
                     <div>
@@ -85,46 +85,54 @@ function TopBar() {
 
                 {/* NAV LINKS */}
                 <nav class="hidden lg:flex items-center gap-8">
-
-                    {/* ACTIVE */}
-                    <a
+                    <A
                         href="/"
-                        class="relative text-sm text-white font-medium pb-1
-               after:absolute after:left-0 after:bottom-0
-               after:h-[2px] after:w-full
-               after:rounded-full
-               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400"
+                        end
+                        activeClass="text-white after:w-full"
+                        inactiveClass="text-zinc-400 hover:text-white after:w-0"
+                        class="relative text-sm font-medium pb-1 transition-all duration-300
+                               after:absolute after:left-0 after:bottom-0 after:h-[2px] after:rounded-full
+                               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400
+                               after:transition-all after:duration-300"
                     >
                         Home
-                    </a>
+                    </A>
 
-                    {/* NORMAL */}
-                    <a
+                    <A
+                        href="/editor"
+                        activeClass="text-white after:w-full"
+                        inactiveClass="text-zinc-400 hover:text-white after:w-0"
+                        class="relative text-sm font-medium pb-1 transition-all duration-300
+                               after:absolute after:left-0 after:bottom-0 after:h-[2px] after:rounded-full
+                               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400
+                               after:transition-all after:duration-300"
+                    >
+                        Workspace
+                    </A>
+
+                    <A
                         href="/tools"
-                        class="relative text-sm text-zinc-400 hover:text-white transition pb-1
-               after:absolute after:left-0 after:bottom-0
-               after:h-[2px] after:w-0
-               after:rounded-full
-               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400
-               after:transition-all after:duration-300
-               hover:after:w-full"
+                        activeClass="text-white after:w-full"
+                        inactiveClass="text-zinc-400 hover:text-white after:w-0"
+                        class="relative text-sm font-medium pb-1 transition-all duration-300
+                               after:absolute after:left-0 after:bottom-0 after:h-[2px] after:rounded-full
+                               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400
+                               after:transition-all after:duration-300"
                     >
                         Tools
-                    </a>
+                    </A>
 
-                    <a
-                        href="/blogs"
-                        class="relative text-sm text-zinc-400 hover:text-white transition pb-1
-               after:absolute after:left-0 after:bottom-0
-               after:h-[2px] after:w-0
-               after:rounded-full
-               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400
-               after:transition-all after:duration-300
-               hover:after:w-full"
+                    <A
+                        href="/tools/search"
+                        activeClass="text-white after:w-full"
+                        inactiveClass="text-zinc-400 hover:text-white after:w-0"
+                        class="relative text-sm font-medium pb-1 transition-all duration-300
+                               after:absolute after:left-0 after:bottom-0 after:h-[2px] after:rounded-full
+                               after:bg-gradient-to-r after:from-cyan-400 after:to-emerald-400
+                               after:transition-all after:duration-300"
                     >
-                        Blogs
-                    </a>
-
+                        Community
+                    </A>
                 </nav>
 
                 {/* AUTH */}
@@ -150,7 +158,13 @@ function TopBar() {
                 >
                     <div class="flex items-center gap-3">
                         <A
-                            href="/editor"
+                            href="/publish"
+                            class="px-4 py-2 rounded-xl text-sm font-medium text-white bg-white/5 border border-white/10 hover:bg-white/10 transition"
+                        >
+                            Publish Part
+                        </A>
+                        <A
+                            href="/profile"
                             class="flex items-center gap-3 p-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 transition"
                         >
                             <div class="h-9 w-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-black font-bold">
