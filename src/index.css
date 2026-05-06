@@ -14,18 +14,26 @@
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100vh;
+  width: 100vw;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 body {
-  overflow: hidden;
   background:
     radial-gradient(circle at 18% 10%, rgba(24, 138, 112, 0.18), transparent 28%),
     radial-gradient(circle at 80% 0%, rgba(210, 132, 44, 0.16), transparent 26%),
     #08090c;
-  overflow: auto;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 button {

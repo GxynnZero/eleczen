@@ -4,6 +4,7 @@ import { simulateCircuit } from '../../lib/simulation/engine';
 import { Settings } from '../../types';
 import { ComponentManager } from './component';
 import { WireManager } from './wire';
+import { buildNetlist } from '../../core/netlist';
 
 class SimulationManager {
   cm: ComponentManager;
@@ -137,8 +138,8 @@ class SimulationManager {
     if (!local.ok) return local;
 
     try {
-      const { runEeCircuitSimulation } = await import('../../lib/simulation/eecircuitEngine');
-      const raw = await runEeCircuitSimulation(local.netlist);
+      const { runSimulation } = await import('../../lib/simulation/eecircuitEngine');
+      const raw = await runSimulation(local.netlist);
 
       if (signal.aborted) {
         const res = buildAbortedResult(local, analysis, probes);
@@ -149,8 +150,8 @@ class SimulationManager {
       const res = buildResult(local, {
         analysis,
         probes,
-        engine: { mode: 'eecircuit', status: 'ready', raw },
-        message: `${local.message} eecircuit-engine completed.`,
+        engine: { mode: 'ngspice', status: 'ready', raw },
+        message: `${local.message} Ngspice simulation completed.`,
       });
 
       this.setSimulation(res);
@@ -167,11 +168,11 @@ class SimulationManager {
         analysis,
         probes,
         engine: {
-          mode: 'eecircuit',
+          mode: 'ngspice',
           status: 'failed',
           raw: String(error?.message || error),
         },
-        message: `${local.message} eecircuit-engine failed; local graph kept active.`,
+        message: `${local.message} Ngspice simulation failed; local graph kept active.`,
       });
 
       this.setSimulation(res);
@@ -181,6 +182,8 @@ class SimulationManager {
 
   applyLocalSimulation(extra = {}) {
     try {
+      const netlistInfo = buildNetlist(this.cm.components(), this.wm.wires(), this.analysisMode() as any);
+      
       const result = simulateCircuit(
         this.cm.components(),
         this.wm.wires(),
@@ -189,6 +192,8 @@ class SimulationManager {
 
       const merged = {
         ...result,
+        netlist: netlistInfo.text,
+        nodeMap: netlistInfo.nodeMap,
         analysis: this.analysisMode(),
         probes: this.probeVariables(),
         engine: { mode: 'local', status: 'ready', raw: null },

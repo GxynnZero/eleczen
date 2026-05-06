@@ -18,7 +18,7 @@ class ComponentManager {
   selection: Accessor<Selection>;
   setSelection: Setter<Selection>;
 
-  constructor({ settings, remember }: { settings: Accessor<Settings>, remember: () => void }) {
+  constructor({ settings, remember, markChanged }: { settings: Accessor<Settings>, remember: () => void, markChanged: (msg: any) => void }) {
     this.settings = settings;
     this.remember = remember;
     this.markChanged = markChanged;

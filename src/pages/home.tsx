@@ -497,7 +497,7 @@ export default function Home() {
                         <div class="relative z-10" style={heroParallaxStyle()}>
                             <div class={`inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-medium uppercase tracking-[0.28em] text-cyan-100 backdrop-blur-xl transition-all duration-700 ${heroReady() ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}>
                                 <Sparkles size={14} />
-                                Next Generation Electronics Workspace under maintaince
+                                Next Generation Electronics Workspace in alpha stage
                             </div>
 
                             <h1 class={`mt-7 max-w-3xl text-5xl font-black leading-[0.92] tracking-[-0.05em] text-white md:text-7xl lg:text-[5.4rem] transition-all duration-900 ${heroReady() ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
@@ -508,7 +508,10 @@ export default function Home() {
                             </h1>
 
                             <p class={`mt-6 max-w-2xl text-base leading-8 text-zinc-300 md:text-lg transition-all duration-900 delay-150 ${heroReady() ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
-                                ElecZen combines simulation, tools, blogs, and projects into a luxurious circuit studio with world-class motion, glass layers, and real product energy.
+                                ElecZen combines simulation, tools, blogs, and projects into a luxurious circuit studio with world-class motion, glass layers, and real product energy.<br></br><br />
+                                <i>
+  We’re building ElecZen in real time. The simulator is already solid, and we’re constantly leveling up the experience. More features dropping soon—stay tuned.
+</i>
                             </p>
 
                             <div class={`mt-9 flex flex-wrap items-center gap-4 transition-all duration-900 delay-200 ${heroReady() ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>

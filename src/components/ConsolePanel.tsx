@@ -1,405 +1,366 @@
-import { createMemo, createSignal, createEffect, For, Show, onCleanup, onMount } from 'solid-js';
-import uPlot from 'uplot';
-import 'uplot/dist/uPlot.min.css';
-
-import { Maximize2, Minimize2 } from 'lucide-solid';
-
 import {
-    analysisMode,
-    setAnalysisMode,
-    probeVariables,
-    toggleProbeVariable,
-    runSimulation,
-    stopSimulation,
-    simulation,
-    simulationRunning,
-    logs,
-    settings,
-    toggleConsoleMaximized,
-} from '../utils/simulation/index';
+  createMemo,
+  createSignal,
+  createEffect,
+  For,
+  Show,
+  onCleanup,
+  onMount,
+} from "solid-js";
+import uPlot, { AlignedData, Options } from "uplot";
+import "uplot/dist/uPlot.min.css";
+import {
+  Maximize2,
+  Minimize2,
+  Terminal,
+  Sparkles,
+  Activity,
+  Cpu,
+  Bell,
+} from "lucide-solid";
 
-/* ---------------- helpers ---------------- */
+// Import from the new architecture
+import { useSimulationStore } from "../stores/simulationStore";
+import { extractChartData } from "../core/probe";
+import {
+  formatSI,
+} from "../adapters/chartAdapter";
 
-function buildPlotData(raw, selected) {
-    if (!raw?.data || !selected.length) return null;
+// Import legacy items for compatibility (canvas state, logs)
+import {
+  logs,
+  settings,
+  toggleConsoleMaximized,
+} from "../utils/simulation/index";
 
-    const length = raw.numPoints || raw.data?.[0]?.values?.length || 0;
-    if (!length) return null;
+const colors = ["#22d3ee", "#f43f5e", "#a855f7", "#eab308", "#10b981", "#6366f1", "#f97316"];
 
-    const x = raw.data[0].values || Array.from({ length }, (_, i) => i + 1);
-    const rows = [x];
-
-    for (const key of selected) {
-        const upperKey = key.toUpperCase();
-        if (upperKey.startsWith('V(') && key.includes(',')) {
-            const match = key.match(/v\(([^,]+),\s*([^)]+)\)/i);
-            if (match) {
-                const [, node1, node2] = match;
-                const n1 = raw.data.find((item) => item.name.toLowerCase() === `v(${node1.toLowerCase()})`);
-                const n2 = raw.data.find((item) => item.name.toLowerCase() === `v(${node2.toLowerCase()})`);
-
-                rows.push(x.map((_, i) => {
-                    const v1 = n1 ? Number(n1.values[i]) : 0;
-                    const v2 = n2 ? Number(n2.values[i]) : 0;
-                    return (Number.isFinite(v1) ? v1 : 0) - (Number.isFinite(v2) ? v2 : 0);
-                }));
-                continue;
-            }
-        }
-
-        const found = raw.data.find((item) => item.name.toLowerCase() === key.toLowerCase());
-
-        rows.push(
-            found?.values?.map((v) => {
-                const num = Number(v);
-                return Number.isFinite(num) ? num : 0;
-            }) || Array(length).fill(0),
-        );
-    }
-
-    return rows;
-}
-
-const BLUE = ['#00b7ff', '#3b82f6', '#60a5fa', '#38bdf8', '#2563eb'];
-
-function tooltipPlugin() {
-    let tooltip;
+function tooltipPlugin(): uPlot.Plugin {
+    let tooltip: HTMLDivElement | null = null;
 
     return {
         hooks: {
-            init: (u) => {
-                tooltip = document.createElement('div');
-                tooltip.className = 'u-tooltip';
-                tooltip.style.display = 'none';
-                u.root.querySelector('.u-over').appendChild(tooltip);
+            init: (u: uPlot) => {
+                const over = u.root.querySelector('.u-over');
+                if (!over) return;
+                
+                tooltip = document.createElement("div");
+                tooltip.style.display = "none";
+                tooltip.style.position = "absolute";
+                tooltip.style.background = "rgba(0, 0, 0, 0.9)";
+                tooltip.style.color = "white";
+                tooltip.style.padding = "12px 16px";
+                tooltip.style.borderRadius = "16px";
+                tooltip.style.pointerEvents = "none";
+                tooltip.style.zIndex = "100";
+                tooltip.style.fontSize = "11px";
+                tooltip.style.fontFamily = "'JetBrains Mono', monospace";
+                tooltip.style.border = "1px solid rgba(255,255,255,0.15)";
+                tooltip.style.backdropFilter = "blur(16px)";
+                tooltip.style.boxShadow = "0 12px 64px rgba(0,0,0,0.8)";
+                over.appendChild(tooltip);
             },
-            setCursor: (u) => {
+            setCursor: (u: uPlot) => {
+                if (!tooltip) return;
                 const { left, top, idx } = u.cursor;
-                if (left < 0 || top < 0 || idx == null) {
-                    tooltip.style.display = 'none';
+                if (left === undefined || left < 0 || idx === undefined || idx === null) {
+                    tooltip.style.display = "none";
                     return;
                 }
 
-                let html = `Point: ${u.data[0][idx]}\n`;
+                let html = "";
+                const xVal = u.data[0][idx];
+                html += `<div style="font-weight:900;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;color:#22d3ee;letter-spacing:0.1em;text-transform:uppercase">TIME: ${formatSI(xVal)}s</div>`;
+                
                 for (let i = 1; i < u.series.length; i++) {
                     const s = u.series[i];
                     if (s.show) {
-                        const val = u.data[i][idx];
-                        const valStr = val != null ? Number(val).toExponential(3) : '--';
-                        html += `<span style="color: ${s.stroke}">${s.label}:</span> ${valStr}\n`;
+                        const yVal = u.data[i][idx];
+                        const color = typeof s.stroke === 'function' ? s.stroke(u, i) : s.stroke;
+                        html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:6px">
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span style="display:inline-block;width:8px;height:8px;background:${color};border-radius:50%;box-shadow:0 0 10px ${color}"></span>
+                                <span style="color:#a1a1aa;font-weight:600;font-size:10px">${s.label}:</span> 
+                            </div>
+                            <span style="font-weight:bold;color:white;font-size:12px">${yVal != null ? formatSI(yVal) : '--'}V</span>
+                        </div>`;
                     }
                 }
 
                 tooltip.innerHTML = html;
-                tooltip.style.display = 'block';
-                tooltip.style.left = left + 'px';
-                tooltip.style.top = top + 'px';
-            },
-        },
+                tooltip.style.display = "block";
+                
+                const bBox = u.root.querySelector('.u-over')?.getBoundingClientRect();
+                if (bBox) {
+                    const tipRect = tooltip.getBoundingClientRect();
+                    let tLeft = left + 20;
+                    let tTop = top + 20;
+                    
+                    if (tLeft + tipRect.width > bBox.width) tLeft = left - tipRect.width - 20;
+                    if (tTop + tipRect.height > bBox.height) tTop = top - tipRect.height - 20;
+
+                    tooltip.style.left = `${tLeft}px`;
+                    tooltip.style.top = `${tTop}px`;
+                }
+            }
+        }
     };
 }
 
-function chartOptions(width, height, selected) {
-    return {
+export default function ConsolePanel() {
+  let chartRef: HTMLDivElement | undefined;
+  let uPlotInst: uPlot | null = null;
+  let resizeObserver: ResizeObserver | null = null;
+
+  const [expressionInput, setExpressionInput] = createSignal("");
+
+  const {
+    simulationData,
+    probes,
+    toggleProbe,
+  } = useSimulationStore();
+
+  const sim = createMemo(() => simulationData());
+  const raw = createMemo(() => sim()?.engine?.raw);
+  const variables = createMemo(() => raw()?.variableNames || []);
+
+  const chartData = createMemo(() => extractChartData(raw(), probes()));
+
+  const renderChart = () => {
+    const data = chartData();
+    const activeProbes = probes().filter(p => p.visible);
+    
+    if (!chartRef || !data || data.time.length <= 1) return;
+
+    if (uPlotInst) {
+        uPlotInst.destroy();
+        uPlotInst = null;
+    }
+
+    const plotData: AlignedData = [data.time];
+    const series: uPlot.Series[] = [{}];
+
+    activeProbes.forEach((probe, i) => {
+        const signal = data.signals[probe.id];
+        if (signal) {
+            plotData.push(signal);
+            series.push({
+                label: probe.id,
+                stroke: probe.color && probe.color !== "#3b82f6" ? probe.color : colors[i % colors.length],
+                width: 3,
+                points: { show: false }
+            });
+        }
+    });
+
+    const opts: Options = {
+        width: chartRef.clientWidth,
+        height: chartRef.clientHeight,
+        cursor: { show: true },
+        legend: { show: false },
         plugins: [tooltipPlugin()],
-        width,
-        height,
-
-        title: 'Signal Waveforms',
-
-        cursor: {
-            drag: { x: true, y: false },
-            focus: { prox: 30 },
-        },
-
-        legend: {
-            show: true,
-        },
-
-        scales: {
-            x: { time: false },
-            y: { auto: true },
-        },
-
         axes: [
             {
-                stroke: '#3b82f6',
-                grid: { stroke: '#0f172a' },
-                ticks: { stroke: '#1e40af' },
-                values: (_, vals) => vals.map((v) => `${v}`),
+                label: "TIME (s)",
+                grid: { show: true, stroke: "rgba(255,255,255,0.03)" },
+                stroke: "#52525b",
+                values: (u, vals) => vals.map(v => formatSI(v)),
+                font: "10px 'JetBrains Mono', monospace",
+                labelFont: "bold 10px 'Inter', sans-serif"
             },
             {
-                stroke: '#3b82f6',
-                grid: { stroke: '#0f172a' },
-                ticks: { stroke: '#1e40af' },
-            },
-        ],
-
-        series: [
-            {},
-            ...selected.map((name, i) => ({
-                label: name,
-                stroke: BLUE[i % BLUE.length],
-                width: 2,
-                points: { show: false },
-            })),
-        ],
-
-        hooks: {
-            init: [
-                (u) => {
-                    u.root.style.background = '#000000';
-                    u.root.style.padding = '4px';
-                },
-            ],
-        },
-    };
-}
-
-function StatCard(props) {
-    return (
-        <div class="rounded-3xl border border-blue-500/20 bg-black p-4 shadow-[0_0_20px_rgba(59,130,246,.08)]">
-            <div class="text-xs uppercase tracking-[0.25em] text-blue-400/70">{props.label}</div>
-            <div class="mt-2 text-lg font-semibold text-white">{props.value}</div>
-        </div>
-    );
-}
-
-function ModeButton(props) {
-    const active = () => analysisMode() === props.value;
-
-    return (
-        <button
-            onClick={() => setAnalysisMode(props.value)}
-            class={`rounded-2xl px-4 py-2 text-sm font-medium transition-all duration-300 ${active()
-                ? 'bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,.45)]'
-                : 'bg-black text-blue-200 border border-blue-500/20 hover:bg-blue-950/40'
-                }`}
-        >
-            {props.children}
-        </button>
-    );
-}
-
-/* ---------------- component ---------------- */
-
-function ConsolePanel() {
-    let chartRef;
-    let resizeHandler;
-
-    const [chart, setChart] = createSignal(null);
-
-    const sim = createMemo(() => simulation());
-    const raw = createMemo(() => sim()?.engine?.raw);
-    const variables = createMemo(() => raw()?.variableNames || []);
-
-    const selected = createMemo(() => {
-        const current = probeVariables();
-        return current.length ? current : variables().slice(0, 3);
-    });
-
-    const chartData = createMemo(() => buildPlotData(raw(), selected()));
-
-    const destroyChart = () => {
-        const current = chart();
-
-        if (current) {
-            current.destroy();
-            setChart(null);
-        }
-
-        if (resizeHandler) {
-            window.removeEventListener('resize', resizeHandler);
-            resizeHandler = null;
-        }
-
-        if (chartRef) chartRef.innerHTML = '';
-    };
-
-    const createPlot = () => {
-        const data = chartData();
-
-        if (!chartRef || !data) return;
-
-        destroyChart();
-
-        const plot = new uPlot(
-            chartOptions(chartRef.clientWidth || 600, chartRef.clientHeight || 320, selected()),
-            data,
-            chartRef,
-        );
-
-        setChart(plot);
-
-        resizeHandler = () => {
-            if (chartRef) {
-                plot.setSize({
-                    width: chartRef.clientWidth || 600,
-                    height: chartRef.clientHeight || 320,
-                });
+                label: "VOLTAGE (V)",
+                grid: { show: true, stroke: "rgba(255,255,255,0.03)" },
+                stroke: "#52525b",
+                values: (u, vals) => vals.map(v => formatSI(v)),
+                font: "10px 'JetBrains Mono', monospace",
+                labelFont: "bold 10px 'Inter', sans-serif"
             }
-        };
-
-        window.addEventListener('resize', resizeHandler);
+        ],
+        series
     };
 
-    onMount(() => {
-        createPlot();
-    });
+    uPlotInst = new uPlot(opts, plotData, chartRef);
+  };
 
-    onCleanup(() => {
-        destroyChart();
-    });
+  onMount(() => {
+    // Slight delay to ensure parent dimensions are settled
+    setTimeout(renderChart, 50);
 
-    createEffect(() => {
-        const data = chartData();
-        const keys = selected().join('|');
-
-        if (!data || !keys) {
-            destroyChart();
-            return;
+    resizeObserver = new ResizeObserver(() => {
+        if (uPlotInst && chartRef) {
+            uPlotInst.setSize({
+                width: chartRef.clientWidth,
+                height: chartRef.clientHeight
+            });
         }
-
-        queueMicrotask(() => createPlot());
     });
 
-    createEffect(() => {
-        const isMax = settings().consoleMaximized;
-        setTimeout(() => {
-            if (chartRef && chart()) {
-                chart().setSize({
-                    width: chartRef.clientWidth || 600,
-                    height: chartRef.clientHeight || 320,
-                });
-            }
-        }, 50);
-    });
+    if (chartRef) resizeObserver.observe(chartRef);
+  });
 
-    return (
-        <section class={`flex flex-col bg-[#05070b] text-white text-xs font-mono border-[#1a1f2e] ${settings().consoleMaximized ? 'fixed inset-0 z-50 !h-full !w-full !max-h-full border-0' : 'h-full w-full border-l'}`}>
-            {/* TOOLBAR */}
-            <div class="flex items-center justify-between bg-[#0f1422] px-3 py-2 border-b border-[#1a1f2e]">
-                <div class="flex items-center gap-4">
-                    <span class="font-bold text-[#4ade80] uppercase tracking-wider">Sim Console</span>
-                    <div class="flex items-center gap-1 border-l border-[#1a1f2e] pl-4">
-                        <ModeButton value="dc">DC</ModeButton>
-                        <ModeButton value="ac">AC</ModeButton>
-                        <ModeButton value="transient">Tran</ModeButton>
-                    </div>
+  onCleanup(() => {
+    if (uPlotInst) uPlotInst.destroy();
+    if (resizeObserver) resizeObserver.disconnect();
+  });
+
+  createEffect(() => {
+    // Trigger re-render when data or probes change
+    const _ = chartData();
+    const __ = probes().map(p => p.visible + p.id).join();
+    setTimeout(renderChart, 10);
+  });
+
+  const handleAddExpression = (e: Event) => {
+    e.preventDefault();
+    if (expressionInput().trim()) {
+      toggleProbe(expressionInput().trim(), "expression");
+      setExpressionInput("");
+    }
+  };
+
+  const ConsoleContent = () => (
+    <section
+      class={`flex flex-col bg-[#05070b] text-white font-sans relative overflow-hidden transition-all duration-300 ${
+        settings().consoleMaximized
+          ? "fixed inset-0 z-[1000] h-screen w-screen"
+          : "h-full w-full border-l border-white/5"
+      }`}
+    >
+      {/* Dynamic Background Glows */}
+      <div class="absolute inset-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-0 left-1/3 w-[800px] h-[800px] bg-cyan-500/[0.03] blur-[160px] rounded-full -translate-y-1/2"></div>
+        <div class="absolute bottom-0 right-1/3 w-[800px] h-[800px] bg-blue-500/[0.03] blur-[160px] rounded-full translate-y-1/2"></div>
+      </div>
+
+      <div class="relative z-10 flex flex-col h-full">
+        {/* CONSOLE HEADER */}
+          <div class="flex items-center justify-between py-2 px-4 border-b border-white/20">
+              <h2 class="text-xl font-black tracking-tight text-white flex items-center">
+                Console
+              </h2>
+
+            <div class="w-px h-8 bg-white/10 mx-2" />
+
+            <button
+              onClick={toggleConsoleMaximized}
+              class={`p-1 rounded-lg border transition-all duration-300 ${
+                settings().consoleMaximized
+                  ? "bg-cyan-500 text-black border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.6)]"
+                  : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Show when={settings().consoleMaximized} fallback={<Maximize2 size={24} />}>
+                <Minimize2 size={24} />
+              </Show>
+            </button>
+          </div>
+
+        {/* WORKSPACE GRID */}
+        <div class="grid grid-cols-1 lg:grid-cols-5 flex-1 min-h-0">
+          
+          {/* Signal Sidebar */}
+          <div class="lg:col-span-1 flex flex-col gap-8 min-h-0">
+             <div class="relative border border-white/10 bg-white/[0.04] backdrop-blur-3xl p-6 flex flex-col flex-1 overflow-hidden shadow-2xl">
+                <div class="text-[11px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-6 flex items-center justify-between">
+                    <span class="flex items-center gap-3"><Activity size={16} class="text-cyan-500" /> Vector Matrix</span>
+                    <span class="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-xl text-[10px] border border-cyan-500/20">{variables().length}</span>
                 </div>
-
-                <div class="flex items-center gap-3">
-                    <div class="flex items-center gap-3 text-[#94a3b8]">
-                        <span>Status: <span class="text-white">{sim()?.engine?.status || 'idle'}</span></span>
-                        <span>Mode: <span class="text-white">{analysisMode()}</span></span>
-                        <span class="truncate max-w-[200px]" title={sim()?.message || 'Ready'}>Msg: <span class="text-white">{sim()?.message || 'Ready'}</span></span>
-                    </div>
-
-                    <div class="border-l border-[#1a1f2e] pl-3 flex gap-2">
-                        <button
-                            onClick={runSimulation}
-                            disabled={simulationRunning()}
-                            class={`px-3 py-1 rounded border ${simulationRunning() ? 'bg-[#1e293b] border-[#334155] text-[#94a3b8] cursor-not-allowed' : 'bg-[#047857] border-[#065f46] hover:bg-[#059669]'}`}
-                        >
-                            Run
-                        </button>
-                        <button
-                            onClick={stopSimulation}
-                            disabled={!simulationRunning()}
-                            class={`px-3 py-1 rounded border ${simulationRunning() ? 'bg-[#be123c] border-[#9f1239] hover:bg-[#e11d48]' : 'bg-[#1e293b] border-[#334155] text-[#94a3b8] cursor-not-allowed'}`}
-                        >
-                            Stop
-                        </button>
-                    </div>
-
-                    <div class="border-l border-[#1a1f2e] pl-3 flex gap-2">
-                        <button
-                            onClick={toggleConsoleMaximized}
-                            class="p-1.5 rounded border bg-[#1e293b] border-[#334155] text-[#94a3b8] hover:text-white transition"
-                            title={settings().consoleMaximized ? "Restore Console" : "Maximize Console"}
-                        >
-                            <Show when={settings().consoleMaximized} fallback={<Maximize2 size={16} />}>
-                                <Minimize2 size={16} />
-                            </Show>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* WORKSPACE */}
-            <div class="flex flex-1 min-h-0 overflow-hidden">
-                {/* PROBES (LEFT) */}
-                <div class="w-48 flex flex-col border-r border-[#1a1f2e] bg-[#0a0d14]">
-                    <div class="bg-[#161b26] px-2 py-1 border-b border-[#1a1f2e] font-semibold text-[#94a3b8]">Probes</div>
-                    <Show
-                        when={variables().length}
-                        fallback={<div class="p-2 text-[#475569]">No data</div>}
-                    >
-                        <div class="flex-1 overflow-y-auto p-1 space-y-1">
-                            <For each={variables()}>
-                                {(name) => (
-                                    <label class="flex cursor-pointer items-center gap-2 rounded hover:bg-[#1e293b] px-2 py-1">
-                                        <input
-                                            type="checkbox"
-                                            checked={probeVariables().includes(name)}
-                                            onChange={() => toggleProbeVariable(name)}
-                                            class="accent-blue-500"
-                                        />
-                                        <span class="truncate" title={name}>{name}</span>
-                                    </label>
-                                )}
-                            </For>
+                
+                <div class="flex-1 overflow-y-auto space-y-3 pr-3 no-scrollbar">
+                    <Show when={variables().length} fallback={
+                        <div class="h-full flex flex-col items-center justify-center opacity-20">
+                            <Cpu size={48} class="mb-6" />
+                            <span class="text-[11px] font-black uppercase tracking-[0.3em] text-center leading-loose">No Analysis<br/>Vector Streams</span>
                         </div>
+                    }>
+                        <For each={variables()}>{(name) => (
+                            <label class={`flex items-center gap-5 p-4 rounded-2xl transition-all cursor-pointer border ${
+                                probes().some(p => p.id === name)
+                                    ? "bg-cyan-500/10 border-cyan-500/40 text-cyan-50 shadow-lg shadow-cyan-950/20"
+                                    : "bg-white/[0.02] border-transparent text-zinc-600 hover:bg-white/[0.06] hover:text-zinc-300"
+                            }`}>
+                                <div class={`w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all ${
+                                    probes().some(p => p.id === name) ? "bg-cyan-500 border-cyan-300 rotate-0" : "bg-black/40 border-zinc-800 rotate-45 hover:rotate-0"
+                                }`}>
+                                    <input type="checkbox" checked={probes().some(p => p.id === name)} onChange={() => toggleProbe(name)} class="hidden" />
+                                    <Show when={probes().some(p => p.id === name)}>
+                                        <div class="w-2.5 h-2.5 bg-white rounded-sm shadow-sm"></div>
+                                    </Show>
+                                </div>
+                                <span class="text-[12px] font-bold font-mono truncate tracking-tight">{name}</span>
+                            </label>
+                        )}</For>
                     </Show>
                 </div>
 
-                {/* GRAPH (CENTER) */}
-                <div class="flex-1 flex flex-col min-w-0 bg-black">
-                    <div class="bg-[#161b26] px-2 py-1 border-b border-[#1a1f2e] font-semibold text-[#94a3b8] flex justify-between">
-                        <span>Waveform ({selected().length} channels)</span>
+                <form onSubmit={handleAddExpression} class="mt-6 pt-6 border-t border-white/10">
+                    <div class="relative group">
+                        <input 
+                            type="text" 
+                            placeholder="Add Custom Vector..." 
+                            value={expressionInput()}
+                            onInput={(e) => setExpressionInput(e.currentTarget.value)}
+                            class="w-full bg-black/60 border-2 border-white/5 rounded-2xl px-6 py-4 text-xs text-white placeholder-zinc-700 focus:border-cyan-500/50 focus:outline-none transition-all focus:ring-8 focus:ring-cyan-500/5"
+                        />
+                        <Sparkles size={16} class="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-cyan-500 transition-colors" />
                     </div>
-                    <div class="flex-1 relative overflow-hidden flex flex-col">
-                        <Show
-                            when={chartData()}
-                            fallback={
-                                <div class="flex-1 flex items-center justify-center text-[#475569]">
-                                    Select probes to view waveform
-                                </div>
-                            }
-                        >
-                            <div ref={chartRef} class="absolute inset-0" />
-                        </Show>
+                </form>
+             </div>
+          </div>
+
+          {/* Waveform Card */}
+          <div class="lg:col-span-3 min-h-0 flex relative border border-white/10 bg-white/[0.04] backdrop-blur-3xl shadow-2xl overflow-hidden group">
+                <div ref={chartRef} class="w-full h-[calc(100%-3rem)] rounded-3xl overflow-hidden bg-black/30 border border-white/5 shadow-inner"></div>
+            </div>
+          {/* Dash Inspector */}
+            <div class="lg:grid-cols-1 flex-1 grid min-h-0 border-b border-white/10">
+                <div class="relative border border-white/10 bg-white/[0.04] backdrop-blur-3xl p-6 flex flex-col overflow-hidden group">
+                    <div class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-4 flex items-center gap-3">
+                        <Terminal size={16} class="text-emerald-500" /> System Netlist
+                    </div>
+                    <div class="flex-1 bg-black/50 border-b border-white/5 rounded-2xl p-5 font-mono text-[11px] leading-relaxed text-emerald-100/40 overflow-auto no-scrollbar group-hover:text-emerald-100/70 transition-colors shadow-inner">
+                        {sim()?.netlist || "* Engine Syncing..."}
                     </div>
                 </div>
 
-                {/* RIGHT PANEL (LOGS/RAW) */}
-                <div class="w-72 flex flex-col border-l border-[#1a1f2e] bg-[#0a0d14]">
-                    {/* NETLIST / RAW */}
-                    <div class="flex-1 flex flex-col min-h-0 border-b border-[#1a1f2e]">
-                        <div class="bg-[#161b26] px-2 py-1 border-b border-[#1a1f2e] font-semibold text-[#94a3b8]">Raw Output</div>
-                        <pre class="flex-1 p-2 overflow-auto whitespace-pre-wrap text-[#cbd5e1]">
-                            {sim()?.engine?.raw?.header || String(sim()?.engine?.raw || 'No output')}
-                        </pre>
+                <div class="relative bg-white/[0.04] backdrop-blur-3xl p-6 flex flex-col overflow-hidden group">
+                    <div class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-4 flex items-center gap-3">
+                        <Cpu size={16} class="text-blue-500" /> Engine Stdout
                     </div>
+                    <div class="flex-1 bg-black/50 border border-white/5 rounded-2xl p-5 font-mono text-[10px] text-zinc-500 overflow-auto whitespace-pre-wrap break-words leading-relaxed no-scrollbar group-hover:text-zinc-300 transition-colors shadow-inner">
+                        {sim()?.engine?.raw?.rawOutput || "> System Handshake Complete."}
+                    </div>
+                </div>
 
-                    {/* LOGS */}
-                    <div class="h-1/3 flex flex-col min-h-0">
-                        <div class="bg-[#161b26] px-2 py-1 border-b border-[#1a1f2e] font-semibold text-[#94a3b8]">Event Log</div>
-                        <div class="flex-1 p-1 overflow-y-auto space-y-1">
-                            <For each={logs()}>
-                                {(entry) => (
-                                    <div class={`px-2 py-1 rounded ${entry.level === 'error' ? 'bg-red-900/30 text-red-200' : entry.level === 'warn' ? 'bg-yellow-900/30 text-yellow-200' : 'text-[#94a3b8]'}`}>
-                                        <span class="opacity-50 mr-2">[{entry.level}]</span>
-                                        {entry.text}
-                                    </div>
-                                )}
-                            </For>
-                        </div>
+                <div class="relative border border-white/10 bg-white/[0.04] backdrop-blur-3xl p-6 flex flex-col overflow-hidden group">
+                    <div class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.4em] mb-4 flex items-center gap-3">
+                        <Bell size={16} class="text-amber-500" /> Event Stream
+                    </div>
+                    <div class="flex-1 overflow-y-auto space-y-3 no-scrollbar pr-2">
+                        <For each={logs()}>{(entry: any) => (
+                            <div class={`p-4 rounded-2xl border transition-all hover:translate-x-1 ${
+                                entry.level === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-200' :
+                                entry.level === 'warn' ? 'bg-amber-500/10 border-amber-500/30 text-amber-200' :
+                                'bg-white/5 border-white/10 text-zinc-600 hover:text-zinc-300'
+                            }`}>
+                                <div class="text-[11px] font-bold leading-relaxed">{entry.text}</div>
+                            </div>
+                        )}</For>
                     </div>
                 </div>
             </div>
-        </section>
-    );
-}
+        </div>
+      </div>
+    </section>
+  );
 
-export default ConsolePanel;
+  return (
+    <Show 
+      when={settings().consoleMaximized} 
+      fallback={<ConsoleContent />}
+    >
+        <ConsoleContent />
+    </Show>
+  );
+}

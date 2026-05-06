@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
-    analysisMode,
     clearAll,
+    components,
     duplicateSelected,
     deleteSelected,
     future,
@@ -10,14 +10,13 @@ import {
     loadSavedProject,
     redo,
     resetView,
-    runSimulation,
     saveProject,
     serializeProject,
-    setAnalysisMode,
     setOption,
     settings,
-    simulationRunning,
     undo,
+    viewport,
+    wires,
     zoomBy,
     mirrorSelected,
     rotateSelected,
@@ -27,7 +26,64 @@ import {
 import { cloudSyncing } from '../utils/cloudStore';
 import CloudProjectsModal from './cloudProjects';
 import CloudLibrary from './cloudLibrary';
-import { BatteryCharging, Lightbulb, Maximize2, Play, Redo2, Undo2, WavesHorizontal, Zap, ZoomIn, ZoomOut, FlipHorizontal, RotateCw, Cloud, Globe } from "lucide-solid";
+import { BatteryCharging, Lightbulb, Maximize2, Play, Redo2, Undo2, WavesHorizontal, Zap, ZoomIn, ZoomOut, FlipHorizontal, RotateCw, Cloud, Globe, StopCircle, ChevronDown, Sliders, Timer, Settings2 } from "lucide-solid";
+import { useSimulationStore } from "../stores/simulationStore";
+
+function ModeButton(props: { value: string; children: any }) {
+    const { analysisMode, setAnalysisMode } = useSimulationStore();
+    const active = () => analysisMode() === props.value;
+  
+    return (
+      <button
+        onClick={() => setAnalysisMode(props.value as any)}
+        class={`px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-xl border ${
+          active()
+            ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/40 shadow-[0_0_25px_rgba(34,211,238,0.2)]"
+            : "text-zinc-600 border-transparent hover:text-zinc-300 hover:bg-white/5"
+        }`}
+      >
+        {props.children}
+      </button>
+    );
+  }
+  
+  function SettingField(props: { label: string; value: string; onInput: (v: string) => void; icon?: any }) {
+      return (
+          <div class="flex flex-col gap-2">
+              <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                  {props.icon && <props.icon size={12} class="text-zinc-700" />}
+                  {props.label}
+              </label>
+              <input 
+                  type="text" 
+                  value={props.value} 
+                  onInput={(e) => props.onInput(e.currentTarget.value)}
+                  class="bg-black/60 border border-white/5 rounded-xl px-4 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-500/40 transition-all focus:ring-4 focus:ring-cyan-500/5 shadow-inner"
+              />
+          </div>
+      );
+  }
+  
+  function SettingCheckbox(props: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+      return (
+          <label class="flex items-center gap-3 cursor-pointer group">
+              <div class={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
+                  props.checked ? "bg-cyan-500 border-cyan-400" : "bg-black/40 border-white/10 group-hover:border-white/30"
+              }`}>
+                  <Show when={props.checked}>
+                      <div class="w-2.5 h-1.5 border-l-2 border-b-2 border-white -rotate-45 -translate-y-0.5"></div>
+                  </Show>
+                  <input 
+                      type="checkbox" 
+                      checked={props.checked} 
+                      onChange={(e) => props.onChange(e.currentTarget.checked)} 
+                      class="hidden" 
+                  />
+              </div>
+              <span class="text-[11px] font-medium text-zinc-400 group-hover:text-white transition-colors">{props.label}</span>
+          </label>
+      );
+  }
 
 const ToolBar = () => {
     let importInput;
@@ -152,7 +208,7 @@ const ToolBar = () => {
                                 onChange={(e) => setOption('engine', e.currentTarget.value)}
                                 class="rounded-2xl border border-white/10 bg-black/80 px-3 py-2 text-sm text-white outline-none"
                             >
-                                <option value="eecircuit">eecircuit</option>
+                                <option value="ngspice">Ngspice WASM</option>
                                 <option value="local">local</option>
                             </select>
                         </label>
@@ -212,7 +268,11 @@ const ToolBar = () => {
             case 'r':
                 if (isCommand) {
                     event.preventDefault();
-                    runSimulation();
+                    if (isSimRunning()) {
+                        stopSimulation();
+                    } else {
+                        startSimulation(components(), wires());
+                    }
                 }
                 break;
             case 'delete':
@@ -245,6 +305,28 @@ const ToolBar = () => {
 
     const iconBtn =
         'h-10 w-10 flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-300 transition-all hover:bg-white/10 hover:text-white active:scale-95 disabled:opacity-40 disabled:pointer-events-none';
+    const { 
+        startSimulation, 
+        stopSimulation, 
+        simulationRunning: isSimRunning,
+        analysisMode,
+        setAnalysisMode,
+        simulationSettings,
+        setSimulationSettings
+    } = useSimulationStore();
+
+    const [showRunSettings, setShowRunSettings] = createSignal(false);
+
+    const updateSetting = (mode: string, key: string, value: string | boolean) => {
+        setSimulationSettings(prev => ({
+            ...prev,
+            [mode]: {
+                ...(prev as any)[mode],
+                [key]: value
+            }
+        }));
+    };
+
     return (
         <div class="relative px-4 py-3">
             <div class="flex items-center gap-2">
@@ -264,13 +346,6 @@ const ToolBar = () => {
                 </button>
 
                 <button
-                    class={navBtn('settings')}
-                    onClick={(e) => toggleMenu('settings', e)}
-                >
-                    Settings
-                </button>
-
-                <button
                     class={navBtn('view')}
                     onClick={(e) => toggleMenu('view', e)}
                 >
@@ -282,6 +357,13 @@ const ToolBar = () => {
                     onClick={(e) => toggleMenu('graph', e)}
                 >
                     Graph
+                </button>
+
+                <button
+                    class={navBtn('settings')}
+                    onClick={(e) => toggleMenu('settings', e)}
+                >
+                    Settings
                 </button>
 
                 <button
@@ -382,13 +464,124 @@ const ToolBar = () => {
                         <Globe size={16} />
                     </button>
 
+                    {/* SIMULATION CONTROLS */}
+                    <div class="mx-1 h-6 w-px bg-white/10" />
+
+                    <div class="relative">
+                        <button
+                            title="Configure Analysis"
+                            onClick={(e) => { e.stopPropagation(); setShowRunSettings(!showRunSettings()); }}
+                            class={`${iconBtn} ${showRunSettings() ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400' : ''}`}
+                        >
+                            <Sliders size={16} />
+                        </button>
+
+                        <Show when={showRunSettings()}>
+                            <div 
+                                class="absolute top-12 right-0 w-[32rem] bg-[#0a0c10]/95 backdrop-blur-3xl border border-white/10 rounded-3xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[1001] animate-in slide-in-from-top-4 duration-300"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div class="flex items-center justify-between mb-8">
+                                    <div class="flex flex-col gap-1">
+                                        <h3 class="text-lg font-black tracking-tight text-white flex items-center gap-3">
+                                            Configure Analysis <span class="text-[10px] font-mono text-cyan-500 uppercase tracking-widest bg-cyan-500/10 px-2 py-0.5 rounded">LT-Standard</span>
+                                        </h3>
+                                        <p class="text-[10px] text-zinc-500 font-medium uppercase tracking-widest text-left">Global Simulation Directives</p>
+                                    </div>
+                                    <button onClick={() => setShowRunSettings(false)} class="p-2 hover:bg-white/5 rounded-full text-zinc-600 hover:text-white transition-all">
+                                        <ChevronDown size={20} />
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center gap-1 mb-8 bg-black/40 p-1 rounded-2xl border border-white/5 overflow-x-auto no-scrollbar">
+                                    <ModeButton value="transient">Transient</ModeButton>
+                                    <ModeButton value="ac">AC Analysis</ModeButton>
+                                    <ModeButton value="dc">DC Sweep</ModeButton>
+                                </div>
+
+                                <div class="space-y-8">
+                                    <Show when={analysisMode() === "transient"}>
+                                        <div class="space-y-8">
+                                            <div class="grid grid-cols-2 gap-6 text-left">
+                                                <SettingField label="Stop Time" icon={Timer} value={simulationSettings().transient.stop} onInput={v => updateSetting("transient", "stop", v)} />
+                                                <SettingField label="Time Step" icon={Timer} value={simulationSettings().transient.step} onInput={v => updateSetting("transient", "step", v)} />
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-6 text-left">
+                                                <SettingField label="Start Saving At" value={simulationSettings().transient.start} onInput={v => updateSetting("transient", "start", v)} />
+                                                <SettingField label="Max Timestep" value={simulationSettings().transient.maxStep} onInput={v => updateSetting("transient", "maxStep", v)} />
+                                            </div>
+                                            <div class="flex flex-col gap-4 bg-white/[0.02] p-6 rounded-2xl border border-white/5">
+                                                <SettingCheckbox label="Start external DC supply voltages at 0V" checked={simulationSettings().transient.startup} onChange={v => updateSetting("transient", "startup", v)} />
+                                                <SettingCheckbox label="Stop simulating if steady state is detected" checked={simulationSettings().transient.steady} onChange={v => updateSetting("transient", "steady", v)} />
+                                                <SettingCheckbox label="Skip initial operating point solution (uic)" checked={simulationSettings().transient.uic} onChange={v => updateSetting("transient", "uic", v)} />
+                                            </div>
+                                            <div class="p-5 bg-black/60 rounded-2xl border border-white/5 font-mono text-left">
+                                                <div class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2">Generated Directive</div>
+                                                <div class="text-xs text-emerald-400">.tran {simulationSettings().transient.step} {simulationSettings().transient.stop} {simulationSettings().transient.start} {simulationSettings().transient.maxStep} {simulationSettings().transient.uic ? 'uic' : ''}</div>
+                                            </div>
+                                        </div>
+                                    </Show>
+
+                                    <Show when={analysisMode() === "ac"}>
+                                        <div class="space-y-6 text-left">
+                                            <SettingField label="Points per Decade" value={simulationSettings().ac.points} onInput={v => updateSetting("ac", "points", v)} />
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <SettingField label="Start Freq" value={simulationSettings().ac.start} onInput={v => updateSetting("ac", "start", v)} />
+                                                <SettingField label="Stop Freq" value={simulationSettings().ac.stop} onInput={v => updateSetting("ac", "stop", v)} />
+                                            </div>
+                                            <div class="p-5 bg-black/60 rounded-2xl border border-white/5 font-mono">
+                                                <div class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2">Generated Directive</div>
+                                                <div class="text-xs text-emerald-400">.ac dec {simulationSettings().ac.points} {simulationSettings().ac.start} {simulationSettings().ac.stop}</div>
+                                            </div>
+                                        </div>
+                                    </Show>
+
+                                    <Show when={analysisMode() === "dc"}>
+                                        <div class="space-y-6 text-left">
+                                            <SettingField label="Source Name" value={simulationSettings().dc.source} onInput={v => updateSetting("dc", "source", v)} />
+                                            <div class="grid grid-cols-3 gap-3">
+                                                <SettingField label="Start" value={simulationSettings().dc.start} onInput={v => updateSetting("dc", "start", v)} />
+                                                <SettingField label="Stop" value={simulationSettings().dc.stop} onInput={v => updateSetting("dc", "stop", v)} />
+                                                <SettingField label="Step" value={simulationSettings().dc.step} onInput={v => updateSetting("dc", "step", v)} />
+                                            </div>
+                                            <div class="p-5 bg-black/60 rounded-2xl border border-white/5 font-mono">
+                                                <div class="text-[9px] text-zinc-500 uppercase tracking-widest mb-2">Generated Directive</div>
+                                                <div class="text-xs text-emerald-400">.dc {simulationSettings().dc.source} {simulationSettings().dc.start} {simulationSettings().dc.stop} {simulationSettings().dc.step}</div>
+                                            </div>
+                                        </div>
+                                    </Show>
+                                </div>
+
+                                <div class="mt-8 flex items-center justify-between">
+                                    <div class="text-[10px] text-zinc-600 flex items-center gap-2">
+                                        <Zap size={12} /> Live Engine Sync
+                                    </div>
+                                    <button 
+                                        onClick={() => isSimRunning() ? stopSimulation() : startSimulation(components(), wires())}
+                                        class={`px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                                            isSimRunning() 
+                                            ? "bg-red-500/10 text-red-400 border border-red-500/30"
+                                            : "bg-cyan-500 text-black shadow-[0_10px_30px_rgba(34,211,238,0.3)] hover:scale-[1.05]"
+                                        }`}
+                                    >
+                                        {isSimRunning() ? "Stop Analysis" : "Run Analysis"}
+                                    </button>
+                                </div>
+                            </div>
+                        </Show>
+                    </div>
+
                     <button
-                        class="ml-2 h-10 px-4 flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 text-black font-semibold shadow-[0_0_25px_rgba(34,211,238,.35)] transition hover:scale-[1.03] active:scale-95 disabled:opacity-50"
-                        onClick={runSimulation}
-                        disabled={simulationRunning()}
+                        onClick={() => isSimRunning() ? stopSimulation() : startSimulation(components(), wires())}
+                        class={`ml-2 h-10 px-3 flex items-center gap-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                            isSimRunning() 
+                            ? "bg-red-500/20 border border-red-500/50 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-500/30" 
+                            : "bg-gradient-to-r from-cyan-500 to-blue-500 text-black shadow-[0_0_25px_rgba(34,211,238,.35)] hover:scale-[1.03]"
+                        }`}
                     >
-                        <Play size={16} class="fill-current" />
-                        Run
+                        <Show when={isSimRunning()} fallback={<Play size={16} class="fill-current" />}>
+                            <StopCircle size={16} class="animate-pulse" />
+                        </Show>
                     </button>
                 </div>
             </div>
@@ -508,7 +701,13 @@ const ToolBar = () => {
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button class="menu-item" onClick={() => { setOption('console', true); closeMenu(); }}>Show Console</button>
-                    <button class="menu-item" onClick={() => { runSimulation(); closeMenu(); }}>Run Simulation</button>
+                    <button class="menu-item" onClick={() => { 
+                        if (isSimRunning()) stopSimulation();
+                        else startSimulation(components(), wires());
+                        closeMenu(); 
+                    }}>
+                        {isSimRunning() ? "Stop Simulation" : "Run Simulation"}
+                    </button>
                     <div class="my-1 h-px bg-white/10" />
                     <div class="px-2 py-1 text-xs uppercase tracking-[0.3em] text-slate-500">Analysis Mode</div>
                     <button class={`menu-item ${analysisMode() === 'dc' ? 'bg-white/10' : ''}`} onClick={() => { setAnalysisMode('dc'); closeMenu(); }}>DC</button>

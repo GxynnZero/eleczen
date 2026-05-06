@@ -46,7 +46,7 @@ class EditorSystem {
     const [settings, setSettings] = createSignal({
       autoRun: false,
       console: true,
-      engine: 'eecircuit',
+      engine: 'ngspice',
       grid: true,
       routing: 'smart',
       showLabels: true,

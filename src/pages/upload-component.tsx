@@ -6,6 +6,7 @@ import {
     updateCloudComponent, 
     deleteCloudComponent 
 } from "../lib/api/components";
+import { uploadFile } from "../lib/api/storage";
 import { 
     Upload, 
     Box, 
@@ -39,6 +40,75 @@ const slugify = (text: string) => {
         .replace(/\s+/g, '-')     // Replace spaces with -
         .replace(/[^\w\-]+/g, '') // Remove all non-word chars
         .replace(/\-\-+/g, '-');  // Replace multiple - with single -
+};
+
+const FileUploadField = (props: { 
+    label: string, 
+    icon: any, 
+    value: string, 
+    onUpdate: (url: string) => void, 
+    accept?: string,
+    placeholder?: string,
+    colorClass?: string
+}) => {
+    const [uploading, setUploading] = createSignal(false);
+    
+    const handleFile = async (e: Event) => {
+        const input = e.target as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+        
+        setUploading(true);
+        try {
+            const { data, error } = await uploadFile(file, 'components', 'uploads');
+            if (error) throw error;
+            if (data?.publicUrl) {
+                props.onUpdate(data.publicUrl);
+            }
+        } catch (err) {
+            console.error("Upload failed", err);
+        } finally {
+            setUploading(false);
+            input.value = "";
+        }
+    };
+
+    return (
+        <div>
+            <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-2 ml-1">{props.label}</label>
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <props.icon size={14} class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
+                    <input 
+                        type="url" 
+                        placeholder={props.placeholder}
+                        value={props.value}
+                        onInput={e => props.onUpdate(e.currentTarget.value)}
+                        class={`w-full bg-zinc-800/30 border border-white/10 rounded-2xl pl-12 pr-5 py-4 focus:outline-none transition shadow-inner text-sm ${props.colorClass || 'text-blue-400 focus:border-blue-500/50'}`}
+                    />
+                </div>
+                <div class="relative flex-shrink-0 group">
+                    <input 
+                        type="file" 
+                        accept={props.accept}
+                        onChange={handleFile}
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        disabled={uploading()}
+                        title="Upload File"
+                    />
+                    <button type="button" class="w-14 h-[54px] bg-zinc-800 group-hover:bg-zinc-700 border border-white/10 rounded-2xl flex items-center justify-center transition disabled:opacity-50 text-zinc-400 group-hover:text-white relative overflow-hidden group-hover:border-blue-500/50 shadow-inner group-hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                        {uploading() ? (
+                            <div class="absolute inset-0 bg-blue-500/20 flex items-center justify-center backdrop-blur-sm">
+                                <div class="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : (
+                            <Upload size={18} />
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default function PublishPage() {
@@ -481,30 +551,26 @@ export default function PublishPage() {
                                                 </div>
                                                 <div class="grid grid-cols-2 gap-6">
                                                     <div class="col-span-2 sm:col-span-1">
-                                                        <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-2 ml-1">Datasheet URL (PDF)</label>
-                                                        <div class="relative">
-                                                            <LinkIcon size={14} class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
-                                                            <input 
-                                                                type="url" 
-                                                                placeholder="https://example.com/spec.pdf"
-                                                                value={datasheetUrl()}
-                                                                onInput={e => setDatasheetUrl(e.currentTarget.value)}
-                                                                class="w-full bg-zinc-800/30 border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-blue-400 focus:outline-none focus:border-purple-500/50 transition shadow-inner"
-                                                            />
-                                                        </div>
+                                                        <FileUploadField
+                                                            label="Datasheet (URL or Upload PDF)"
+                                                            icon={LinkIcon}
+                                                            value={datasheetUrl()}
+                                                            onUpdate={setDatasheetUrl}
+                                                            accept=".pdf"
+                                                            placeholder="https://example.com/spec.pdf"
+                                                            colorClass="text-blue-400 focus:border-purple-500/50"
+                                                        />
                                                     </div>
                                                     <div class="col-span-2 sm:col-span-1">
-                                                        <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-2 ml-1">Pinout Reference Image</label>
-                                                        <div class="relative">
-                                                            <ImageIcon size={14} class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
-                                                            <input 
-                                                                type="url" 
-                                                                placeholder="https://example.com/pinout.png"
-                                                                value={pinoutImage()}
-                                                                onInput={e => setPinoutImage(e.currentTarget.value)}
-                                                                class="w-full bg-zinc-800/30 border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-zinc-400 focus:outline-none focus:border-purple-500/50 transition shadow-inner"
-                                                            />
-                                                        </div>
+                                                        <FileUploadField
+                                                            label="Pinout Image (URL or Upload)"
+                                                            icon={ImageIcon}
+                                                            value={pinoutImage()}
+                                                            onUpdate={setPinoutImage}
+                                                            accept="image/*"
+                                                            placeholder="https://example.com/pinout.png"
+                                                            colorClass="text-zinc-400 focus:border-purple-500/50"
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
@@ -547,17 +613,15 @@ export default function PublishPage() {
                                                     />
                                                 </div>
                                                 <div class="col-span-2">
-                                                    <label class="block text-[10px] uppercase font-bold text-zinc-500 mb-2 ml-1">Product Photo URL</label>
-                                                    <div class="relative">
-                                                        <ImageIcon size={14} class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
-                                                        <input 
-                                                            type="url" 
-                                                            placeholder="https://example.com/product.jpg"
-                                                            value={imageUrl()}
-                                                            onInput={e => setImageUrl(e.currentTarget.value)}
-                                                            class="w-full bg-zinc-800/30 border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-zinc-300 focus:outline-none focus:border-emerald-500/50 transition shadow-inner"
-                                                        />
-                                                    </div>
+                                                    <FileUploadField
+                                                        label="Product Photo (URL or Upload)"
+                                                        icon={ImageIcon}
+                                                        value={imageUrl()}
+                                                        onUpdate={setImageUrl}
+                                                        accept="image/*"
+                                                        placeholder="https://example.com/product.jpg"
+                                                        colorClass="text-zinc-300 focus:border-emerald-500/50"
+                                                    />
                                                 </div>
                                             </div>
                                         </section>

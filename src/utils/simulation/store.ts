@@ -39,6 +39,7 @@ let _es, _sm;
 export const cm = new ComponentManager({
   settings: () => _es.settings(),
   remember: () => _es?.remember(),
+  markChanged: (msg) => _es?._markChanged(msg),
 });
 
 export const wm = new WireManager(
@@ -61,6 +62,7 @@ export const es = new EditorSystem(cm, wm, {
 export const sm = new SimulationManager(cm, wm, {
   pushLog:   (t, l) => es.pushLog(t, l),
   setOption: (k, v) => es.setOption(k, v),
+  settings:  () => es.settings(),
   ready,
 });
 

@@ -81,27 +81,6 @@ const Inspector = () => {
     };
   });
 
-  const wireLength = createMemo(() => {
-    const w = wire();
-    if (!w) return null;
-
-    const pts = [
-      ...(w.anchors || [])
-    ];
-
-    if (pts.length < 1) return null;
-
-    let len = 0;
-    for (let i = 0; i < pts.length - 1; i++) {
-      len += Math.hypot(
-        pts[i + 1].x - pts[i].x,
-        pts[i + 1].y - pts[i].y
-      );
-    }
-
-    return len;
-  });
-
   const format = (value, unit = '') => {
     if (value == null) return '--';
     const abs = Math.abs(value);
@@ -154,7 +133,7 @@ const Inspector = () => {
             onChange={(e) => updateSelectedPosition({ rotation: Number(e.currentTarget.value) || 0 })}
           />
         </label>
-        <label class="field editable mt-2 mb-4">
+        <label class="field editable mt-2 mb-4 mx-0 justify-between">
           <span>Value</span>
           <input
             type="number"
@@ -163,6 +142,10 @@ const Inspector = () => {
               setComponentValue(component().id, e.currentTarget.value)
             }
           />
+          <select class="bg-black/70 p-2 rounded-lg border-2 border-white/10 ">
+            <option value="micro">u</option>
+            <option value="milli">m</option>
+          </select>
         </label>
 
         <div class="panel-title text-xs text-gray-500 mt-2 border-t border-gray-800 pt-2">Simulation Metrics</div>

@@ -416,65 +416,6 @@ function describeGraph(graph) {
   };
 }
 
-export function buildNetlist(components, wires, analysis = 'dc') {
-  const parent = new Map();
-  const terminals = components.flatMap((component) =>
-    (PARTS[component.type]?.ports || []).map((port) => termKey({ componentId: component.id, portId: port.id })),
-  );
-  const find = (node) => {
-    if (!parent.has(node)) parent.set(node, node);
-    if (parent.get(node) !== node) parent.set(node, find(parent.get(node)));
-    return parent.get(node);
-  };
-  const union = (a, b) => parent.set(find(a), find(b));
-
-  for (const terminal of terminals) find(terminal);
-  for (const wire of wires) union(termKey(wire.from), termKey(wire.to));
-
-  const firstBattery = components.find((component) => component.type === 'battery');
-  const groundRoot = firstBattery ? find(termKey({ componentId: firstBattery.id, portId: 'neg' })) : null;
-  const names = new Map();
-  const nodeName = (componentId, portId) => {
-    const root = find(termKey({ componentId, portId }));
-    if (root === groundRoot) return '0';
-    if (!names.has(root)) names.set(root, `N${names.size + 1}`);
-    return names.get(root);
-  };
-
-  const lines = components.map((component) => {
-    const id = component.id.replace(/\W/g, '_');
-    const ports = PARTS[component.type]?.ports.map((port) => nodeName(component.id, port.id)) || [];
-    const value = partValue(component);
-
-    if (component.type === 'battery') return `V_${id} ${ports[0]} ${ports[1]} DC ${value}`;
-    if (component.type === 'resistor') return `R_${id} ${ports[0]} ${ports[1]} ${value}`;
-    if (component.type === 'led') return `D_${id} ${ports[0]} ${ports[1]} DLED`;
-    if (component.type === 'capacitor') return `C_${id} ${ports[0]} ${ports[1]} ${value}u`;
-    if (component.type === 'switch') return `R_${id}_SW ${ports[0]} ${ports[1]} ${Math.max(0.001, value)}`;
-    return `* Unsupported ${component.type}`;
-  });
-
-  const analysisDirective =
-    analysis === 'ac'
-      ? '.ac dec 20 10 1e6'
-      : analysis === 'transient'
-        ? '.tran 1u 10m'
-        : '.op';
-
-  const text = ['* ElecZen netlist', ...lines, '.model DLED D(Is=1e-20 N=2)', analysisDirective, '.end'].join('\n');
-
-  const nodeMap = new Map();
-  for (const component of components) {
-    const ports = PARTS[component.type]?.ports || [];
-    for (const port of ports) {
-      const key = termKey({ componentId: component.id, portId: port.id });
-      nodeMap.set(key, nodeName(component.id, port.id));
-    }
-  }
-
-  return { text, nodeMap };
-}
-
 export function simulateCircuit(components, wires, analysis = 'dc') {
   const byId = new Map(components.map((component) => [component.id, component]));
   const states = Object.fromEntries(components.map((component) => [component.id, blankState()]));
@@ -566,15 +507,11 @@ export function simulateCircuit(components, wires, analysis = 'dc') {
     ? `Circuit running at ${(totals.current * 1000).toFixed(1)} mA.`
     : messages[0] || 'No complete battery-resistor-LED loop.';
 
-  const netlistInfo = buildNetlist(components, wires, analysis);
-
   return {
     ok,
     message,
     states,
     stats: totals,
-    netlist: netlistInfo.text,
-    nodeMap: netlistInfo.nodeMap,
     graph: describeGraph(graph),
   };
 }
